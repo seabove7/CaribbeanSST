@@ -304,7 +304,7 @@ for (i in 1:data_brick@file@nbands) {
   had_df <- rbind(had_df, df)
 }
 
-save(had_df, file = "data/HadISST/HadISST_reefs.Rdata")
+save(had_df, file = "data/HadISST/HadISST_reefs_poly.Rdata")
 
 ```
 
