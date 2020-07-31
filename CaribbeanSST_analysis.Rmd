@@ -64,6 +64,7 @@ proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
 
 ```
 
+
 *All code, data, and other necessary files needed to reproduce these analyses and figures can be found on my [CaribbeanSST GitHub repository](https://github.com/seabove7/CaribbeanSST). Dropbox links are also provided for large files (netCDF/shape) for download within the Rmarkdown code*   
 
 ```{r setting non-git file paths}
@@ -88,9 +89,9 @@ HadISST_sst_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_dat
 # Dropbox link: https://www.dropbox.com/s/x3m622sscegx9m7/pathfinder_combined_monthly_data.nc?dl=0
 pathfinder_combined_monthly_data_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/pathfinder_combined_monthly_data.nc"
 
-## PathfinderSST_monthly_edit.nc: 
-# Dropbox link: https://www.dropbox.com/s/mvh9atmfuqhdq3k/PathfinderSST_monthly_edit.nc?dl=0
-PathfinderSST_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/PathfinderSST_monthly_edit.nc"
+## Pathfinder_monthly_edit.nc: 
+# Dropbox link: https://www.dropbox.com/s/mvh9atmfuqhdq3k/Pathfinder_monthly_edit.nc?dl=0
+Pathfinder_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/Pathfinder_monthly_edit.nc"
 
 ```
 
@@ -195,6 +196,8 @@ Tend_index <- min(which(difftime(nc_times,end_date)>0))
 data_brick <- data_brick[[Tstart_index:Tend_index]]
 time <- nc_times[Tstart_index:Tend_index]
 
+#save(time, nc_times, file = "data/HadISST/HadISST_times.Rdata") # save the time variables for IDs for running scripts remotely
+
 
 ### subsetting the HadISST raster for 1981 - 2019 timespand for comparison with Pathfinder
 start_dateb <- "1981-08-16"
@@ -247,35 +250,55 @@ colnames(had_slope_sub) <- c("sst", "x", "y")
 
 ```{r HadISST SST polygon extraction - REMOTE, eval=FALSE, include=FALSE, paged.print=FALSE}
 
+# ***NOTE***
+####--- this portion of the script was run on a high performance computing cluster because of the long runtime needed
+####--- see separate R script (SSTExtraction_ReefPolygon.R) for instructions (located in the code folder)
+####--- the script can be put on a cluster with the HadISST netCDF (HadISST_sst.nc) to run
+
+
+##########################################
+# If working with a smaller data set, you can run the below code to accomplish the same outcome as the SSTExtraction_ReefPolygon.R script.
+# The code below has been adapted to specifically work with the HadISST_sst.nc and Caribbean_reefs.shp files:
+
+## Load the Pathfinder EDIT netCDF as rasterBrick
+had_brick <- brick(HadISST_sst_path)
+
+## Create an empty dataframe to populate while running the forloop with the following parameters:
 had_df <- data.frame('date' = integer(),
-                     'mean' = integer(),
-                     'min' = integer(),
-                     'max' = integer(),
-                     'weighted' = integer(),
-                     'difference' = integer(),
-                     'polygon' = integer())
+                      'mean' = integer(),
+                      'min' = integer(),
+                      'max' = integer(),
+                      'weighted' = integer(),
+                      'difference' = integer(),
+                      'polygon' = integer())
 
-for (i in 1:data_brick@file@nbands) {
-  raster <- data_brick[[i]]
 
-  mean_sst_vals <- raster::extract(raster, shapes, fun=mean)
-  min_sst_vals <- raster::extract(raster, shapes, fun=min)
-  max_sst_vals <- raster::extract(raster, shapes, fun=max)
-  weighted_mean <- raster::extract(raster, shapes, weights=TRUE, fun=mean)
-
+## for loop that runs through each raster layer and extracts the SST corresponding to reef polygons
+for (i in 1:had_brick@file@nbands) {
+  raster <- had_brick[[i]]
+  
+  mean_sst_vals <- raster::extract(raster, shapes, fun=mean) # calculates a mean SST within each reef polygon
+  min_sst_vals <- raster::extract(raster, shapes, fun=min) # minimum SST within each reef polygon
+  max_sst_vals <- raster::extract(raster, shapes, fun=max) # maximum SST within each reef polygon
+  weighted_mean <- raster::extract(raster, shapes, weights=TRUE, fun=mean) # calculates the weighted mean SST within each reef polygon
+  
   df <- data.frame('date' = raster@data@names,
                    'mean' = mean_sst_vals,
                    'min' = min_sst_vals,
                    'max' = max_sst_vals,
                    'weighted' = weighted_mean,
                    'difference' = mean_sst_vals - weighted_mean)
-
-  df$polygon <- rownames(df)
   
-  had_df <- rbind(had_df, df)
+  df$polygon <- rownames(df) # names the row with polygon ID (numeric IDs)
+  
+  had_df <- rbind(had_df, df) # adds the above information for each polygon onto the dataframe containing the other calculated values
 }
 
-save(had_df, file = "data/HadISST/HadISST_reefs_poly.Rdata")
+
+## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
+## *** Only uncomment these lines if you want to write over existing files ***
+#save(had_df, file = "HadISST_reefs_poly.Rdata")
+#write.csv(had_df, file = "HadISST_reefs_poly.csv")
 
 ```
 
@@ -527,9 +550,9 @@ end_date2 <- as.POSIXct(end_date2, tz="UTC")
 Tstart_index2 <- min(which(difftime(nc_times,start_date2)>0))
 Tend_index2 <- min(which(difftime(nc_times,end_date2)>0))
 data_brick2 <- data_brick2[[Tstart_index2:Tend_index2]]
-time2 <- nc_times[Tstart_index2:Tend_index2]
+time <- nc_times[Tstart_index2:Tend_index2]
 
-#save(time2, nc_times, file = "data/PathfinderSST/Path_times.Rdata")
+save(time, nc_times, file = "data/Pathfinder/Pathfinder_times.Rdata")# save the time variables for IDs for running scripts remotely
 
 ```
 
@@ -552,13 +575,13 @@ data_brick2b <- calc(data_brick2, KtoC) # apply the Kelvin function written abov
 
 ## Calculate slope of temperature change across time for each pixel
 # simple lm function applied to the raster brick to calculate the slope of temperature change over timescale of raster
-lm.fun2 <- function(x, time2){
+lm.fun2 <- function(x, time){
   if(is.na(x)){NA} # this removes any NA values from the slope calculations 
   else{
-    lm(x~time2)$coefficients[2]*60*60*24 # slope here is degrees/day
+    lm(x~time)$coefficients[2]*60*60*24 # slope here is degrees/day
   }}
 
-raster_slope2 <- calc(data_brick2, function(x)lm.fun2(x, time2 = time2)) # function applied here
+raster_slope2 <- calc(data_brick2, function(x)lm.fun2(x, time = time)) # function applied here
 
 
 ## Create dataframe from calculated slope raster in C per decade for plotting
@@ -570,9 +593,9 @@ colnames(path_slope) <- c("sst", "x", "y")
 ## Save the edited netCDF file and the slope raster/dataframe
 ## Only uncomment these lines if you want to write over existing files!! 
 
-#writeRaster(data_brick2b, filename = "data/PathfinderSST/PathfinderSST_monthly_edit.nc", format="CDF", overwrite=FALSE)
-#save(path_slope, file = "data/PathfinderSST/Pathfinder_slope.Rdata")
-#write.csv(path_slope, file = "data/PathfinderSST/Pathfinder_slope.csv", row.names=FALSE)
+#writeRaster(data_brick2b, filename = "data/Pathfinder/Pathfinder_monthly_edit.nc", format="CDF", overwrite=FALSE)
+#save(path_slope, file = "data/Pathfinder/Pathfinder_slope.Rdata")
+#write.csv(path_slope, file = "data/Pathfinder/Pathfinder_slope.csv", row.names=FALSE)
 
 # --------- *Plotting occurs down at the bottom of the markdown file* --------- #
 
@@ -582,11 +605,16 @@ colnames(path_slope) <- c("sst", "x", "y")
 
 # ***NOTE***
 ####--- this portion of the script was run on a high performance computing cluster because of the long runtime needed
-####--- see separate R script (Pathfinder_SSTExtraction_Polygon.R) for instructions (located in the code folder)
-####--- the script can be put on a cluster with the edited Pathfinder netCDF (PathfinderSST_monthly_edit.nc) to run
+####--- see separate R script (SSTExtraction_ReefPolygon.R) for instructions (located in the code folder)
+####--- the script can be put on a cluster with the edited Pathfinder netCDF (Pathfinder_monthly_edit.nc) to run
 
 
 ##########################################
+# If working with a smaller data set, you can run the below code to accomplish the same outcome as the SSTExtraction_ReefPolygon.R script.
+# The code below has been adapted to specifically work with the Pathfinder_monthly_edit.nc and Caribbean_reefs.shp files:
+
+## Load the Pathfinder EDIT netCDF as rasterBrick
+path_brick <- brick(Pathfinder_monthly_edit_path)
 
 ## Create an empty dataframe to populate while running the forloop with the following parameters:
 path_df <- data.frame('date' = integer(),
@@ -599,8 +627,8 @@ path_df <- data.frame('date' = integer(),
 
 
 ## for loop that runs through each raster layer and extracts the SST corresponding to reef polygons
-for (i in 1:data_brick2@file@nbands) {
-  raster <- data_brick2[[i]]
+for (i in 1:path_brick@file@nbands) {
+  raster <- path_brick[[i]]
   
   mean_sst_vals <- raster::extract(raster, shapes, fun=mean) # calculates a mean SST within each reef polygon
   min_sst_vals <- raster::extract(raster, shapes, fun=min) # minimum SST within each reef polygon
@@ -621,7 +649,7 @@ for (i in 1:data_brick2@file@nbands) {
 
 
 ## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
-## Only uncomment these lines if you want to write over existing files!! 
+## *** Only uncomment these lines if you want to write over existing files ***
 #save(path_df, file = "Pathfinder_reefs_poly.Rdata")
 #write.csv(path_df, file = "Pathfinder_reefs_poly.csv")
 
@@ -630,7 +658,7 @@ for (i in 1:data_brick2@file@nbands) {
 ```{r path SST reefs, eval=FALSE, include=FALSE}
 
 ## this is the data frame of extracted SST based on polygons
-load("data/PathfinderSST/Pathfinder_reefs_poly.Rdata")
+load("data/Pathfinder/Pathfinder_reefs_poly.Rdata")
 
 path_poly <- path_df[,c(1,7,5)] # select only the polygon ID, weighted mean SST, and time 
 path_poly$polygon <- factor(path_poly$polygon)
@@ -689,7 +717,7 @@ path_sst <- raster::extract(data_brick2, path_ReefPTS_shifted)
 
 
 #convert the data matrix to a xts object
-path_sst_xts <- xts(t(path_sst), time2) #t is used to transpose the matrix because xts assumes dates are along the lines, not columns
+path_sst_xts <- xts(t(path_sst), time) #t is used to transpose the matrix because xts assumes dates are along the lines, not columns
 colnames(path_sst_xts) <- reef_gps$L3 #ID the columns
 
 path_sst_df <- data.frame(date=index(t(path_sst_xts)), coredata(t(path_sst_xts)))
@@ -844,8 +872,8 @@ had_map_sub
 
 ```{r path SST map, message=FALSE, warning=FALSE}
 
-load("data/PathfinderSST/Pathfinder.Rdata") # load Rdata of the modified Pathfinder raster
-#path_slope <- read.csv("/Users/colleen/Dropbox/Coauthor\ Publication/Precht_Review/data/PathfinderSST/path_slope3.csv", header = TRUE) # or load csv
+load("data/Pathfinder/Pathfinder.Rdata") # load Rdata of the modified Pathfinder raster
+#path_slope <- read.csv("/Users/colleen/Dropbox/Coauthor\ Publication/Precht_Review/data/Pathfinder/path_slope3.csv", header = TRUE) # or load csv
 
 path_map <- ggplot() +  
   theme_bw() +

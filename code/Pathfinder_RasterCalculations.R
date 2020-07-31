@@ -57,7 +57,7 @@ end_date2 <- as.POSIXct(end_date2, tz="UTC") # change time format
 Tstart_index2 <- min(which(difftime(nc_times,start_date2)>0)) 
 Tend_index2 <- min(which(difftime(nc_times,end_date2)>0))
 data_brick2 <- data_brick2[[Tstart_index2:Tend_index2]] # this restricts the raster brick by the time constraints
-time2 <- nc_times[Tstart_index2:Tend_index2] # this 'time2' list is used throughout the script as the time IDs
+time <- nc_times[Tstart_index2:Tend_index2] # this 'time' list is used throughout the script as the time IDs
 
 
 #### -- End of previously run scirpt. Below will run new script using the rasterBrick and calculate slope
@@ -73,13 +73,13 @@ data_brick2b <- calc(data_brick2, KtoC) # apply the Kelvin function written abov
 
 ## Calculate slope of temperature change across time for each pixel
 # simple lm function applied to the raster brick to calculate the slope of temperature change over timescale of raster
-lm.fun2 <- function(x, time2){
+lm.fun2 <- function(x, time){
   if(is.na(x)){NA} # this removes any NA values from the slope calculations 
   else{
-    lm(x~time2)$coefficients[2]*60*60*24 # slope here is degrees/day
+    lm(x~time)$coefficients[2]*60*60*24 # slope here is degrees/day
   }}
 
-raster_slope2 <- calc(data_brick2, function(x)lm.fun2(x, time2 = time2)) # function applied here
+raster_slope2 <- calc(data_brick2, function(x)lm.fun2(x, time = time)) # function applied here
 
 
 ## Create dataframe from calculated slope raster in C per decade for plotting
