@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 ```
 
-```{r setup}
+```{r load libraries}
 
 ### Used packages that need to be installed to run code:
 # install.packages("sf", "ncdf4", "raster", "maptools", "rgdal", "ggplot2", "tidyverse", "xts", "RColorBrewer", "tidyr", "dplyr", "fields", "gganimate", "sp", "plotly", "grDevices", "repmis")
@@ -45,6 +45,9 @@ library(plotly)
 library(grDevices)
 library(repmis)
 
+```
+
+```{r other setup}
 
 # set the current date
 date <- Sys.Date() 
@@ -114,7 +117,6 @@ shapefile(reefs_cropped, "data/ReefData/Caribbean_reefs.shp") # save the new Car
 
 reefs <- st_read("data/ReefData/Caribbean_reefs.shp") # for plotting reefs
 #reefs <- reefs[1,] # to play with a more manageable file 
-
 reef_pt <- st_coordinates(reefs) # extracts all the polygon coordinates into a matrix
 reef_pt <- as.data.frame(reef_pt) # convert from matrix to dataframe
 
@@ -243,7 +245,7 @@ colnames(had_slope_sub) <- c("sst", "x", "y")
 
 ```
 
-```{r forloop - had, eval=FALSE, include=FALSE, paged.print=FALSE}
+```{r HadISST SST polygon extraction - REMOTE, eval=FALSE, include=FALSE, paged.print=FALSE}
 
 had_df <- data.frame('date' = integer(),
                      'mean' = integer(),
@@ -309,6 +311,7 @@ pixel_coordinates <- coordinates(first_day)
 data <- raster::extract(first_day, pixel_coordinates)
 #now check which ones are NA and delete those entries from the "pixel.coordinates" list
 pixel_coordinates <- pixel_coordinates[!is.na(data),]
+
 
 #create new sampling points, shifted to the center of the pixel they fall on, or to the near pixel in case that one is NA
 ReefPTS_shifted <- vector()
@@ -526,9 +529,11 @@ Tend_index2 <- min(which(difftime(nc_times,end_date2)>0))
 data_brick2 <- data_brick2[[Tstart_index2:Tend_index2]]
 time2 <- nc_times[Tstart_index2:Tend_index2]
 
+#save(time2, nc_times, file = "data/PathfinderSST/Path_times.Rdata")
+
 ```
 
-```{r path raster edit and slope calculation, eval=FALSE, include=FALSE}
+```{r path raster edit and slope calculation - REMOTE, eval=FALSE, include=FALSE}
 
 # ***NOTE***
 ####--- this portion of the script was run on a high performance computing cluster because of the long runtime needed
@@ -566,91 +571,121 @@ colnames(path_slope) <- c("sst", "x", "y")
 ## Only uncomment these lines if you want to write over existing files!! 
 
 #writeRaster(data_brick2b, filename = "data/PathfinderSST/PathfinderSST_monthly_edit.nc", format="CDF", overwrite=FALSE)
-#save(path_slope, file = "data/PathfinderSST/path_slope.Rdata")
-#write.csv(path_slope, file = "data/PathfinderSST/path_slope.csv", row.names=FALSE)
+#save(path_slope, file = "data/PathfinderSST/Pathfinder_slope.Rdata")
+#write.csv(path_slope, file = "data/PathfinderSST/Pathfinder_slope.csv", row.names=FALSE)
 
 # --------- *Plotting occurs down at the bottom of the markdown file* --------- #
 
 ```
 
-```{r forloop - path, eval=FALSE, include=FALSE, paged.print=FALSE}
+```{r path SST polygon extraction - REMOTE, eval=FALSE, include=FALSE}
 
 # ***NOTE***
 ####--- this portion of the script was run on a high performance computing cluster because of the long runtime needed
-####--- see separate R script (Pathfinder_RasterCalculations.R) for instructions (located in the code folder)
-####--- the script can be put on a cluster with the Pathfinder netCDF (pathfinder_combined_monthly_data.nc) to run
+####--- see separate R script (Pathfinder_SSTExtraction_Polygon.R) for instructions (located in the code folder)
+####--- the script can be put on a cluster with the edited Pathfinder netCDF (PathfinderSST_monthly_edit.nc) to run
 
 
 ##########################################
 
-# successful code for extracting by polygons goes here ---->
+## Create an empty dataframe to populate while running the forloop with the following parameters:
+path_df <- data.frame('date' = integer(),
+                      'mean' = integer(),
+                      'min' = integer(),
+                      'max' = integer(),
+                      'weighted' = integer(),
+                      'difference' = integer(),
+                      'polygon' = integer())
+
+
+## for loop that runs through each raster layer and extracts the SST corresponding to reef polygons
+for (i in 1:data_brick2@file@nbands) {
+  raster <- data_brick2[[i]]
+  
+  mean_sst_vals <- raster::extract(raster, shapes, fun=mean) # calculates a mean SST within each reef polygon
+  min_sst_vals <- raster::extract(raster, shapes, fun=min) # minimum SST within each reef polygon
+  max_sst_vals <- raster::extract(raster, shapes, fun=max) # maximum SST within each reef polygon
+  weighted_mean <- raster::extract(raster, shapes, weights=TRUE, fun=mean) # calculates the weighted mean SST within each reef polygon
+  
+  df <- data.frame('date' = raster@data@names,
+                   'mean' = mean_sst_vals,
+                   'min' = min_sst_vals,
+                   'max' = max_sst_vals,
+                   'weighted' = weighted_mean,
+                   'difference' = mean_sst_vals - weighted_mean)
+  
+  df$polygon <- rownames(df) # names the row with polygon ID (numeric IDs)
+  
+  path_df <- rbind(path_df, df) # adds the above information for each polygon onto the dataframe containing the other calculated values
+}
+
+
+## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
+## Only uncomment these lines if you want to write over existing files!! 
+#save(path_df, file = "Pathfinder_reefs_poly.Rdata")
+#write.csv(path_df, file = "Pathfinder_reefs_poly.csv")
 
 ```
 
 ```{r path SST reefs, eval=FALSE, include=FALSE}
 
 ## this is the data frame of extracted SST based on polygons
-load("data/PathfinderSST/Pathfinder.Rdata")
-
-path_df$mean2 <- round((path_df$mean - 273.15), 2)
-path_df$weighted2 <- round((path_df$weighted - 273.15), 2)
-path_df$diff2 <-round((path_df$mean - path_df$weighted), 2)
-
-
+load("data/PathfinderSST/Pathfinder_reefs_poly.Rdata")
 
 path_poly <- path_df[,c(1,7,5)] # select only the polygon ID, weighted mean SST, and time 
 path_poly$polygon <- factor(path_poly$polygon)
 path_poly <- spread(path_poly, polygon, weighted) # convert from long to wide format
+path_poly$date <- nc_times # add the date/time back into the dataframe
 
 ```
 
 ```{r path GPS extraction, eval=FALSE, include=FALSE}
 
 ## create dataframe of missing polygon GPS corrdinates to extract from Pathfinder raster
-NAcol <- colnames(path_poly)[colSums(is.na(path_poly)) > 0] # identify the columns with NA values to pull SST from GPS points instead of polygons
-reef_gps <- reef_pt %>% filter(L3 == NAcol) # select only GPS points of polygons missing SST data above
+NAcol_path <- colnames(path_poly)[colSums(is.na(path_poly)) > 230] # identify the columns with NA values in more than half of timeframe to pull SST from GPS points instead of polygons
+path_reef_gps <- reef_pt %>% filter(L3 == NAcol_path) # select only GPS points of polygons missing SST data above
 
 ## converting sampling points to spatial points and applying projection to points
-LongLat <- cbind(reef_gps$X, reef_gps$Y) 
-ReefPTS <- SpatialPoints(LongLat)
-proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
-projection(ReefPTS) <- proj
+path_LongLat <- cbind(path_reef_gps$X, path_reef_gps$Y) 
+path_ReefPTS <- SpatialPoints(path_LongLat)
+projection(path_ReefPTS) <- proj
 
 
-#some pixels fall on land. Finding nearest valid pixels
-#pixels coordinates
-first_day2 <- data_brick2[[1]]
+## finding nearest valid pixel that corresponds to reef location
+#--- This portion is adapted from Fernando Lima (CIBIO/InBIO, Universidade do Porto)
+#---->
 
-plot(first_day2, col = colr, xlab="Long", ylab="Lat", main=paste0("Pathfinder SST on ",start_date2), colNA="grey", cex.main=0.8, cex.axis=0.8, cex.lab=0.7, ylim = c(8, 30), xlim = c(-95, -55))
+## need to load the Pathfinder edited netCDF and read in as raster to extract nearest pixels
+path_data <- pathfinder_combined_monthly_data_path
+data_brick2 <- brick(path_data) 
+month1 <- data_brick2[[2]] # pixels coordinates
+pixel_coordinates <- coordinates(month1)
 
-pixel_coordinates <- coordinates(first_day2)
-#delete coordinates where data is missing (NA)
-#first, extract data for all pixels
-data <- raster::extract(first_day2, pixel_coordinates)
-#now check which ones are NA and delete those entries from the "pixel.coordinates" list
-pixel_coordinates <- pixel_coordinates[!is.na(data),]
+# delete coordinates where data is missing (NA)
+data <- raster::extract(month1, pixel_coordinates) # extract data for all pixels
+pixel_coordinates <- pixel_coordinates[!is.na(data),] # check for NAs and delete those entries from the "pixel.coordinates" list
 
-#create new sampling points, shifted to the center of the pixel they fall on, or to the near pixel in case that one is NA
-ReefPTS_shifted <- vector()
-#loop cycling through sampling points
-for (p in 1:length(ReefPTS)) {
-  #geodesic distances
-  distances <- rdist.earth(coordinates(ReefPTS[p]),pixel_coordinates,miles=FALSE)
-  #coordinates of the pixel that is at shorter distance 
+# create new sampling points, shifted to the center of the pixel they fall on, or to the near pixel in case that one is NA
+path_ReefPTS_shifted <- vector()
+# loop cycling through sampling points
+for (p in 1:length(path_ReefPTS)) {
+  # geodesic distances
+  distances <- rdist.earth(coordinates(path_ReefPTS[p]), pixel_coordinates, miles=FALSE)
+  # coordinates of the pixel that is at shorter distance
   shifted_coordinates <- pixel_coordinates[which.min(distances),]
-  #assigning those coordinates to a new item
-  cmd <- paste0("sp.",p,"<-shifted_coordinates")
+  # assigning those coordinates to a new item
+  cmd <- paste0("sp.", p, "<-shifted_coordinates")
   eval(parse(text=cmd))
-  #points(pt[1],pt[2])
-  cmd <- paste0("ReefPTS_shifted<-rbind(ReefPTS_shifted,sp.",p,")")
+  cmd <- paste0("path_ReefPTS_shifted<-rbind(path_ReefPTS_shifted,sp.", p, ")")
   eval(parse(text = cmd))
+  print(p) 
 }
+#---->
 
 
 
-#extract data from the sst brick with the sampling points shifted
-path_sst <- raster::extract(data_brick2, ReefPTS_shifted)
-#look at it lines are locations; columns are dates
+path_sst <- raster::extract(data_brick2, path_ReefPTS_shifted)
+
 
 
 #convert the data matrix to a xts object

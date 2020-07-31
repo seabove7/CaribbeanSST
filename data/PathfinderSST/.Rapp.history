@@ -1,1 +1,6 @@
 load("/Users/colleen/CaribbeanSST/data/PathfinderSST/Pathfinder.Rdata")
+load("/Users/colleen/Dropbox/Git/CaribbeanSST/data/PathfinderSST/Pathfinder_reefs.Rdata")
+load("/Users/colleen/Dropbox/Git/CaribbeanSST/data/PathfinderSST/Pathfinder.Rdata")
+load("/Users/colleen/Dropbox/Git/CaribbeanSST/data/PathfinderSST/Pathfinder_reefs_poly.Rdata")
+load("/Users/colleen/Dropbox/Git/CaribbeanSST/data/PathfinderSST/Pathfinder_slope.Rdata")
+load("/Users/colleen/Dropbox/Git/CaribbeanSST/data/PathfinderSST/Pathfinder_reefs_poly_RENAME.Rdata")
