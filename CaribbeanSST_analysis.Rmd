@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 ```{r setup}
 
 ### Used packages that need to be installed to run code:
-# install.packages("sf", "ncdf4", "raster", "maptools", "rgdal", "ggplot2", "tidyverse", "xts", "RColorBrewer", "tidyr", "dplyr", "fields", "gganimate", "sp", "plotly", "grDevices")
+# install.packages("sf", "ncdf4", "raster", "maptools", "rgdal", "ggplot2", "tidyverse", "xts", "RColorBrewer", "tidyr", "dplyr", "fields", "gganimate", "sp", "plotly", "grDevices", "repmis")
 
 # library(devtools)
 # devtools::install_github("NCAR/fields")
@@ -43,6 +43,7 @@ library(gganimate)
 library(sp)
 library(plotly)
 library(grDevices)
+library(repmis)
 
 
 # set the current date
@@ -60,11 +61,41 @@ proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
 
 ```
 
+*All code, data, and other necessary files needed to reproduce these analyses and figures can be found on my [CaribbeanSST GitHub repository](https://github.com/seabove7/CaribbeanSST). Dropbox links are also provided for large files (netCDF/shape) for download within the Rmarkdown code*   
+
+```{r setting non-git file paths}
+
+### Since the shape and netCDF files are too large to store on GitHub, those need to be stored locally.
+## Dropbox links are included to download the corresponding files. Just update the local path to each.
+## The paths for the files stored on Dropbox are below:
+
+## gshhs_f.b: coastline map shapefile
+# Dropbox link: https://www.dropbox.com/s/exn3p4v2q6isvla/gshhs_f.b?dl=0
+gshhs_f_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/gshhs_f.b"
+
+## WCMC008_CoralReef2018_Py_v4.shp: global coral reef shapefiles
+# Dropbox link: https://www.dropbox.com/sh/q9yn83jzx57yx9h/AACHWXkNUQ7HX4ZKqnaMzv2aa?dl=0
+WCMC008_CoralReef2018_Py_v4_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/14_001_WCMC008_CoralReefs2018_v4/01_Data/WCMC008_CoralReef2018_Py_v4.shp"
+
+## HadISST_sst.nc: 
+# Dropbox link: https://www.dropbox.com/s/o6filpg0b3xe5i5/HadISST_sst.nc?dl=0
+HadISST_sst_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/HadISST_sst.nc"
+
+## pathfinder_combined_monthly_data.nc: 
+# Dropbox link: https://www.dropbox.com/s/x3m622sscegx9m7/pathfinder_combined_monthly_data.nc?dl=0
+pathfinder_combined_monthly_data_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/pathfinder_combined_monthly_data.nc"
+
+## PathfinderSST_monthly_edit.nc: 
+# Dropbox link: https://www.dropbox.com/s/mvh9atmfuqhdq3k/PathfinderSST_monthly_edit.nc?dl=0
+PathfinderSST_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/PathfinderSST_monthly_edit.nc"
+
+```
+
 
 ```{r read in land shapefile, include=FALSE}
 
 if (!rgeosStatus()) gpclibPermit()
-gshhs.f.b <- "data/ReefData/gshhs_f.b"
+gshhs.f.b <- gshhs_f_path
 land <- getRgshhsMap(gshhs.f.b, xlim = c(-105, -40), ylim = c(-10, 40)) %>%
   fortify()
 
@@ -73,7 +104,7 @@ land <- getRgshhsMap(gshhs.f.b, xlim = c(-105, -40), ylim = c(-10, 40)) %>%
 ```{r create Caribbean reef shapefile, eval=FALSE, include=FALSE}
 
 # read in the global coral reef shapefile 
-shape <- shapefile("data/ReefData/14_001_WCMC008_CoralReefs2018_v4/01_Data/WCMC008_CoralReef2018_Py_v4.shp")
+shape <- shapefile(WCMC008_CoralReef2018_Py_v4_path)
 reefs_cropped <- crop(shape, extent(-88, -55, 8, 30)) # crop for the Caribbean region only
 shapefile(reefs_cropped, "data/ReefData/Caribbean_reefs.shp") # save the new Caribbean-specific reef shapefile
 
@@ -132,7 +163,7 @@ HadISST reports monthly SSTs at 1$^\circ$ resolution. According to their website
 ```{r HadISST raster}
 
 ## read in the HadISST raster
-had_data <- "data/HadISST/HadISST_sst.nc"
+had_data <- HadISST_sst_path
 data_brick<-brick(had_data) # read SST data as rasterbrick
 data_brick<-crop(data_brick,extent(Xmin,Xmax,Ymin,Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
 
@@ -209,68 +240,6 @@ had_slope_sub <- as.data.frame(as(raster_slope_sub, "SpatialPixelsDataFrame")) #
 colnames(had_slope_sub) <- c("sst", "x", "y")
 
 # --------- *Plotting occurs down at the bottom of the markdown file* --------- #
-
-```
-
-```{r custom cluster - had, eval=FALSE, include=FALSE}
-
-## For first time installment of 'doAzureParallel'
-# library(devtools)
-# install_github("Azure/doAzureParallel")
-
-# Perform parallel calculation on Azure cluster:
-
-# 1. Load the 'doAzureParallel' and 'forEach' libraries
-library(doAzureParallel)
-library(foreach)
-
-# 2. Load the credentials file (which should be placed in the working directory), to allow R to authenticate with the Azure cluster.
-# NOTE - make sure this is not committed to git!
-setCredentials("/Users/colleen/Dropbox/Shrubbery_Files/credentials.json") 
-
-# 3. 'Make' the cluster. The cluster defined in 'cluster.json' (named 'shrubbery') already exists, so this should not actually create a cluster instance, just tell R to use the existing cluster, and specify Docker images to use etc.
-cluster <- makeCluster("Shrubbery_Files/cluster_had.json")
-
-# 4. Register the cluster to use it for parallel processing
-registerDoAzureParallel(cluster)
-
-# 5. Perform the parallel processing:
-#   - Use the R 'foreach' library, rather than a regular for loop
-#   - Specify 'rbind' to recombine the individual computations into the data frame
-#     using 'rbind'. Other combination functions (e.g. 'cbind') can be used if 
-#     needed in a different situation
-#   - Use the '%dopar%' operator to tell R to run the code inside the foreach
-#     statement as parallel processes
-#   - Some data types transfer nicely to the cluster (e.g. the reef shape file). Others
-#     do not (e.g. the netCDF data brick). In this case, the data brick is read from
-#     file on the cluster by each node, rather than trying to 'send it' via R.
-#     It is part of the Docker image, and stored in /data/.
-#   - Explicitly include any libraries used inside of the foreach loop into '.packages'
-#     parameter (libraries used only outside the 'foreach' don't need to be included)
-
-n_iterations <- data_brick@file@nbands
-#n_iterations <- 3
-had_df <- foreach(i = 1:n_iterations, .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {
-
-  rast <- brick("/data/HadISST_sst.nc")[[i]]
-  
-  mean_sst_vals <- raster::extract(rast, shapes, fun=mean)
-  min_sst_vals <- raster::extract(rast, shapes, fun=min)
-  max_sst_vals <- raster::extract(rast, shapes, fun=max)
-  weighted_mean <- raster::extract(rast, shapes, weights=TRUE, fun=mean)
-  
-  df <- data.frame('date' = rast@data@names,
-                   'mean' = mean_sst_vals,
-                   'min' = min_sst_vals,
-                   'max' = max_sst_vals,
-                   'weighted' = weighted_mean,
-                   'difference' = mean_sst_vals - weighted_mean)
-  
-  df$polygon <- rownames(df)
-  return(df)
-}
-
-save(had_df, file = "Users/colleen/Dropbox/Coauthor Publication/Precht_Review/data/HadISST_reefs_poly.Rdata")
 
 ```
 
@@ -525,7 +494,7 @@ Pathfinder reports SST twice daily (night and day) at 4km resolution via NOAA Na
 ```{r Pathfinder raster}
 
 ## read in the Pathfinder raster
-path_data <- "data/PathfinderSST/pathfinder_combined_monthly_data.nc"
+path_data <- pathfinder_combined_monthly_data_path
 data_brick2 <- brick(path_data) # read SST data as rasterbrick
 data_brick2 <- crop(data_brick2,extent(Xmin,Xmax,Ymin,Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
 
