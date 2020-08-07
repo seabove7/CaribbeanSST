@@ -1223,7 +1223,7 @@ had_max_year_plot <- ggplot() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
   geom_raster(data = had_max_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
-  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000, 2020)) +
+  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000), limits = c(2020, 1870)) +
   guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
   geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
   coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
@@ -1311,7 +1311,7 @@ had_max_subset_year_plot <- ggplot() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
   geom_raster(data = had_max_sub_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
-  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse") +
+  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000), limits = c(2020, 1870)) +
   guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
   geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
   coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
@@ -1408,7 +1408,7 @@ path_max_subset_plot
 #  theme_bw() +
 #  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = #element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
 #  geom_raster(data = path_max_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
-#  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse") +
+#  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000), limits = c(2020, 1870)) +
 #  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
 #  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
 #  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
@@ -1460,23 +1460,23 @@ colnames(had_min) <- c("min", "x", "y")
 
 
 
-###### Minimum SST extraction and dataframe
-#
-### Convert the raster of observational year to a df for plotting
-#had_min_yr <- read.csv("data/HadISST/HadISST_MinSST_layers.csv", header = TRUE)
-#
-### Create dataframe of layer and year
-#load("data/HadISST/HadISST_times.Rdata") # load in the time data again for HadISST 
-#times_had <- data.frame("time" = time, "layer" = seq(1,1801)) # dataframe of year and layer ID
-#times_had <- times_had %>% separate(time, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
-#times_had <- times_had[,-c(3:6)] # subset out the day/time columns
-#
-### Update min date dataframe with time instead of layer
-#had_min_time <- merge(had_min_yr, times_had, layer = layer) # merge together the dataframes so that corresponding year matches
-#had_min_time$year <- as.numeric(had_min_time$year) # convert year to numeric
-#had_min_time$month <- factor(had_min_time$month) # convert month to factor
-#had_min_time <- had_min_time %>% mutate(month = recode(month, '01' = 'Jan', '02' = 'Feb', '03' = 'Mar', '04' = 'Apr', '05' = 'May', '06' = 'Jun', #'07' = 'Jul', '08' = 'Aug', '09' = 'Sep', '10' = 'Oct', '11' = 'Nov', '12' = 'Dec')) # replace month number with name
-#
+##### Minimum SST extraction and dataframe
+
+## Convert the raster of observational year to a df for plotting
+had_min_yr <- read.csv("data/HadISST/HadISST_MinSST_layers.csv", header = TRUE)
+
+## Create dataframe of layer and year
+load("data/HadISST/HadISST_times.Rdata") # load in the time data again for HadISST 
+times_had <- data.frame("time" = time, "layer" = seq(1,1801)) # dataframe of year and layer ID
+times_had <- times_had %>% separate(time, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
+times_had <- times_had[,-c(3:6)] # subset out the day/time columns
+
+## Update min date dataframe with time instead of layer
+had_min_time <- merge(had_min_yr, times_had, layer = layer) # merge together the dataframes so that corresponding year matches
+had_min_time$year <- as.numeric(had_min_time$year) # convert year to numeric
+had_min_time$month <- factor(had_min_time$month) # convert month to factor
+had_min_time <- had_min_time %>% mutate(month = recode(month, '01' = 'Jan', '02' = 'Feb', '03' = 'Mar', '04' = 'Apr', '05' = 'May', '06' = 'Jun', '07' = 'Jul', '08' = 'Aug', '09' = 'Sep', '10' = 'Oct', '11' = 'Nov', '12' = 'Dec')) # replace month number with name
+
 ```
 
 ```{r had min SST map, message=FALSE, warning=FALSE, fig.align='center' , fig.width=12, fig.height=6}
@@ -1493,39 +1493,40 @@ had_min_plot <- ggplot() +
   ylab("Latitude") +
   xlab("Longitude") +
   ggtitle(paste0("Minimum recorded SST (", format.Date(start_date, "%Y"), " - ", format.Date(end_date, "%Y"),")")) 
-had_min_plot
 
-### Plot the year of the min SST
-#had_min_year_plot <- ggplot() +  
-#  theme_bw() +
-#  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = #element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-#  geom_raster(data = had_min_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
-#  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000, 2020)) +
-#  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-#  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-#  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-#  ylab("Latitude") +
-#  xlab("Longitude") +
-#  ggtitle("Year of minimum SST") 
-#
-#
-### Plot the month of the min SST
-#had_min_month_plot <- ggplot() +  
-#  theme_bw() +
-#  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = #element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-#  geom_raster(data = had_min_time, aes(x = x, y = y, fill = month), alpha=0.8) + 
-#  scale_fill_brewer("", palette = "BrBG") +
-#  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-#  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-#  ylab("Latitude") +
-#  xlab("Longitude") +
-#  ggtitle("Month of minimum SST") 
-#
-#
-### Combined min SST and year observed plot
-#plot_grid(had_min_plot, had_min_year_plot, had_min_month_plot, labels = c("A", "B", "C"), ncol = 3) +
-#  ggsave("figures/Fig12_HadISST_minSST.pdf", width = 14, height = 5)
-#
+
+## Plot the year of the min SST
+had_min_year_plot <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  geom_raster(data = had_min_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
+  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000), limits = c(2020, 1870)) +
+  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
+  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
+  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
+  ylab("Latitude") +
+  xlab("Longitude") +
+  ggtitle("Year of minimum SST") 
+
+
+## Plot the month of the min SST
+had_min_month_plot <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  geom_raster(data = had_min_time, aes(x = x, y = y, fill = month), alpha=0.8) + 
+  scale_fill_brewer("", palette = "BrBG") +
+  guides(fill = guide_legend(nrow = 2)) +
+  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
+  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
+  ylab("Latitude") +
+  xlab("Longitude") +
+  ggtitle("Month of minimum SST") 
+
+
+## Combined min SST and year observed plot
+plot_grid(had_min_plot, had_min_year_plot, had_min_month_plot, labels = c("A", "B", "C"), ncol = 3) +
+  ggsave("figures/Fig12_HadISST_minSST.pdf", width = 14, height = 5)
+
 ```
 
 **Figure 12 |** Minimum SST ($^\circ$C) recorded in the entire HadISST dataset (from `r format.Date(start_date, "%Y")` to `r format.Date(end_date, "%Y")`) within each grid (**A**). The year in which each minimum SST was observed is denoted in panel **B**. 
@@ -1588,7 +1589,7 @@ had_min_subset_year_plot <- ggplot() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
   geom_raster(data = had_min_sub_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
-  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse") +
+  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000), limits = c(2020, 1870)) +
   guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
   geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
   coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
@@ -1709,7 +1710,7 @@ carib_ecoreg <- ecoreg %>%
 ## Plot the ecoregions on the Caribbean map
 ggplot(carib_ecoreg) + 
   geom_sf(colour = "black", aes(fill = ECOREGION), alpha = 0.5) +
-  scale_fill_brewer("Ecoregion", palette = "BrBG") +
+  scale_fill_brewer("Ecoregion", palette = "Set2") +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
   geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
