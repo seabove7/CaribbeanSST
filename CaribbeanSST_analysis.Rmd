@@ -173,7 +173,7 @@ A custom cluster was created to extract SST data on a loop from HadISST and Path
 
 ### HadISST dataset (1870 - 2019)
 
-HadISST reports monthly SSTs at 1$^\circ$ resolution. According to their website:
+HadISST reports monthly SSTs at 1$^\circ$ resolution. [Data can be accessed here](https://www.metoffice.gov.uk/hadobs/hadisst/). According to their website:
 
 > "HadISST uses reduced space optimal interpolation applied to SSTs from the Marine Data Bank (mainly ship tracks) and ICOADS through 1981 and a blend of in-situ and adjusted satellite-derived SSTs for 1982-onwards."
 
@@ -568,9 +568,11 @@ ggplot() +
 
 ### Pathfinder dataset (1981 - 2019)
 
-Pathfinder reports SST twice daily (night and day) at 4km resolution via NOAA National Centers for Environmental Information (NCEI). According to their website:
+Pathfinder reports SST twice daily (night and day) at 4km resolution via NOAA National Centers for Environmental Information (NCEI). [Data can be accessed here](https://www.nodc.noaa.gov/SatelliteData/pathfinder4km/). According to their website:
 
 > "L3C is generated with measurements combined from a single instrument into a space-time grid. The dataset was computed with data from the AVHRR instruments on board NOAA's polar orbiting satellite series using an entirely modernized system based on SeaDAS (version 6.4)."
+
+For ease of analysis, monthly mean SSTs per pixel were calculated from the Pathfinder data and saved as a new netCDF file for all downstream analyses. 
 
 ```{r Pathfinder raster}
 
@@ -1714,7 +1716,7 @@ ggplot(carib_ecoreg) +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
   geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  #geom_point(data = reef_pt, aes( x = X, y = Y), colour = "black", size = 0.1) +
+  geom_point(data = reef_pt, aes( x = X, y = Y), colour = "black", size = 0.1) +
   coord_sf(xlim = c(-95,-55), ylim = c(8,33)) +
   ylab("Latitude") +
   xlab("Longitude") +
