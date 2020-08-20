@@ -1695,7 +1695,7 @@ Here, I plan to work on binning the reefs into subregions (like in Muñiz-castil
 
 Another thing to note, I did not crop reefs originally with these shapefiles so I have a few on the western coast of Panama (for example) that technically do not fall within the Caribbean proper. Thoughts on if I should redo all the SST extractions (**Figures 2-5**) clipping reef locations with these shapefiles?
 
-```{r ecoregion map}
+```{r ecoregion map, message=FALSE, warning=FALSE}
 
 ### The global marine ecoregion shapefile was read in and cropped based on the Caribbean region
 #region <- shapefile(ecoregion_shape_path)
@@ -1710,7 +1710,7 @@ carib_ecoreg <- ecoreg %>%
   filter(PROVINCE =="Tropical Northwestern Atlantic" & ECOREGION != "Bermuda" & ECOREGION != "Southern Gulf of Mexico") 
 
 ## Plot the ecoregions on the Caribbean map
-ggplot(carib_ecoreg) + 
+ecoreg_map <- ggplot(carib_ecoreg) + 
   geom_sf(colour = "black", aes(fill = ECOREGION), alpha = 0.5) +
   scale_fill_brewer("Ecoregion", palette = "Set2") +
   theme_bw() +
@@ -1719,12 +1719,86 @@ ggplot(carib_ecoreg) +
   geom_point(data = reef_pt, aes( x = X, y = Y), colour = "black", size = 0.1) +
   coord_sf(xlim = c(-95,-55), ylim = c(8,33)) +
   ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle("Caribbean ecoregions")
+  xlab("Longitude")
 
 ```
 
-**Figure 14 |** Caribbean ecoregions as established by Spalding *et al* 2007 included in this analysis. All marine ecoregion shapefiles and accompanying manuscript can be accessed [here](https://www.worldwildlife.org/publications/marine-ecoregions-of-the-world-a-bioregionalization-of-coastal-and-shelf-areas). Based on reef selection at the start of the analysis, both the Bermuda and Southern Gulf of Mexico regions have been excluded from the analysis and reefs along the western coast of Central America have been excluded with these shapes.  
+
+```{r subsetting reefs by ecoregion}
+
+### Subset reefs by ecoregions for analyses by region
+
+# reef shape files containing reef polygons
+ecoregions2 <- readOGR('data/EcoRegions', 'Caribbean_ecoregions') 
+
+# Select the only the desired ecoregion:
+Bahamian_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Bahamian", ]
+ECarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Eastern Caribbean", ]
+FL_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Floridian", ]
+Antillies_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Greater Antilles", ]
+SCarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Southern Caribbean", ]
+SWCarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Southwestern Caribbean", ]
+WCarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Western Caribbean", ]
+
+
+# Clip the reefs by the selected ecoregion bounds:
+Bahamian_reefs <- shapes[Bahamian_ecoreg,]
+ECarib_reefs <- shapes[ECarib_ecoreg,]
+FL_reefs <- shapes[FL_ecoreg,]
+Antillies_reefs <- shapes[Antillies_ecoreg,]
+SCarib_reefs <- shapes[SCarib_ecoreg,]
+SWCarib_reefs <- shapes[SWCarib_ecoreg,]
+WCarib_reefs <- shapes[WCarib_ecoreg,]
+
+```
+
+```{r ecoregion reef plot}
+
+# PLot the reefs as points, coloured by region
+eco_reef_map <- ggplot() +
+    #geom_rect(aes(xmin=-Inf,xmax=Inf,ymin=-Inf, ymax=41.5), fill="#666666") +
+    geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
+    coord_sf(xlim = c(-95,-55), ylim = c(8,33)) +
+    ylab("Latitude") +
+    xlab("Longitude") +
+    theme_bw() +
+    theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
+    geom_point(data = Bahamian_reefs, aes(x=long, y = lat, group = group), fill = "#1B9E77", color='#1B9E77', size = 0.2) +
+    geom_point(data = ECarib_reefs, aes(x=long, y = lat, group = group), fill = "#D95F02", color='#D95F02', size = 0.2) +
+    geom_point(data = FL_reefs, aes(x=long, y = lat, group = group), fill = "#7570B3", color='#7570B3', size = 0.2) +
+    geom_point(data = Antillies_reefs, aes(x=long, y = lat, group = group), fill = "#E7298A", color='#E7298A', size = 0.2) +
+    geom_point(data = SCarib_reefs, aes(x=long, y = lat, group = group), fill = "#66A61E", color='#66A61E', size = 0.2) +
+    geom_point(data = SWCarib_reefs, aes(x=long, y = lat, group = group), fill = "#E6AB02", color='#E6AB02', size = 0.2) +
+    geom_point(data = WCarib_reefs, aes(x=long, y = lat, group = group), fill = "#A6761D", color='#A6761D', size = 0.2  
+
+
+# Plot actual shape polygons, coloured by region
+#ggplot() +
+#    geom_rect(aes(xmin=-Inf,xmax=Inf,ymin=-Inf, ymax=41.5), fill="#666666") +
+#    geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "lightgrey", color='lightgrey', lwd = 0.1) +
+#    coord_sf(xlim = c(-90,-57), ylim = c(8,28)) +
+#    ylab("Latitude") +
+#    xlab("Longitude") +
+#    theme_bw() +
+#    geom_polygon(data = Bahamian_reefs, aes(x=long, y = lat, group = group), fill = "#1B9E77", color='#1B9E77', lwd = 0.1) +
+#    geom_polygon(data = ECarib_reefs, aes(x=long, y = lat, group = group), fill = "#D95F02", color='#D95F02', lwd = 0.1) +
+#    geom_polygon(data = FL_reefs, aes(x=long, y = lat, group = group), fill = "#7570B3", color='#7570B3', lwd = 0.1) +
+#    geom_polygon(data = Antillies_reefs, aes(x=long, y = lat, group = group), fill = "#E7298A", color='#E7298A', lwd = 0.1) +
+#    geom_polygon(data = SCarib_reefs, aes(x=long, y = lat, group = group), fill = "#66A61E", color='#66A61E', lwd = 0.1) +
+#    geom_polygon(data = SWCarib_reefs, aes(x=long, y = lat, group = group), fill = "#E6AB02", color='#E6AB02', lwd = 0.1) +
+#    geom_polygon(data = WCarib_reefs, aes(x=long, y = lat, group = group), fill = "#A6761D", color='#A6761D', lwd = 0.1) 
+
+```
+
+```{r combined ecoregion map}
+
+plot_grid(ecoreg_map, eco_reef_map, ncol = 1, labels = c("A", "B"))
+
+```
+
+
+**Figure 14 |** Caribbean ecoregions (**A**) as established by Spalding *et al* 2007 included in this analysis and the associate reef locations (**B**). All marine ecoregion shapefiles and accompanying manuscript can be accessed [here](https://www.worldwildlife.org/publications/marine-ecoregions-of-the-world-a-bioregionalization-of-coastal-and-shelf-areas). Based on reef selection at the start of the analysis, both the Bermuda and Southern Gulf of Mexico regions have been excluded from the analysis and reefs along the western coast of Central America have been excluded with these shapes.  
+
 
 <br/><br/>
   
