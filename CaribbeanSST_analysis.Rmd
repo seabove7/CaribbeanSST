@@ -480,6 +480,7 @@ had_full2$year <- as.integer(had_full2$year)
 hadplot_markdown <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
   geom_line(data = had_full2[-151,], aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
   scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(had_full2$year), space="Lab") +
   #geom_ribbon(data = HADI_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
@@ -495,6 +496,7 @@ ggplotly(hadplot_markdown) # this plots an interactive version of the map in the
 had_plot_gif <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
   geom_line(data = had_full2[-151,], aes(x = month, y = mean_temp, group = year, colour = year), size = 1) +
   scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(had_full2$year), space="Lab") +
   #geom_ribbon(data = HADI_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
@@ -551,6 +553,7 @@ ggplot() +
   #geom_line(data = HADI_year_avg[-151,], aes(x = year, y = mean), colour = "black", group = 1, size = 1.2) +
   scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2019)) +
   ylab('SST (°C)') +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
   geom_line(data = HADI_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
   geom_line(data = HADI_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
   geom_smooth(data = HADI_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE) + # smoothed mean temp
@@ -895,6 +898,7 @@ path_full2$year <- as.integer(path_full2$year) # make year integer for better pl
 hadplot_markdown <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
   geom_line(data = path_full2[-151,], aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
   scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(path_full2$year), space="Lab") +
   #geom_ribbon(data = Path_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
@@ -910,6 +914,7 @@ ggplotly(hadplot_markdown) # this plots an interactive version of the map in the
 path_plot_gif <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
   geom_line(data = path_full2[-151,], aes(x = month, y = mean_temp, group = year, colour = year), size = 1) +
   scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(path_full2$year), space="Lab") +
   #geom_ribbon(data = Path_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
@@ -963,6 +968,7 @@ ggplot() +
   #geom_line(data = Path_year_avg[-151,], aes(x = year, y = mean), colour = "black", group = 1, size = 1.2) +
   scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2019)) +
   ylab('SST (°C)') +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
   geom_line(data = Path_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
   geom_line(data = Path_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
   geom_smooth(data = Path_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE) + # smoothed mean temp
@@ -1007,7 +1013,7 @@ combo_plot <- ggplot() +
   geom_line(data = Path_year_avg[-151,], aes(x = year, y = mean), colour = "black", group = 1, size = 0.5) + 
   geom_smooth(data = Path_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE) +
   ggtitle("Caribbean coral reefs historic SST trends (1981 - 2019)") +
-  ylim(24, 30) +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
   coord_cartesian(xlim = c(1870, 2019))
   #ggsave("figures/Combined_SST_annual.pdf", width = 6, height = 4) # I have not saveed this figure outside the Rmarkdown file
 
@@ -1716,7 +1722,7 @@ ecoreg_map <- ggplot(carib_ecoreg) +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
   geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  geom_point(data = reef_pt, aes( x = X, y = Y), colour = "black", size = 0.1) +
+  #geom_point(data = reef_pt, aes( x = X, y = Y), colour = "black", size = 0.1) +
   coord_sf(xlim = c(-95,-55), ylim = c(8,33)) +
   ylab("Latitude") +
   xlab("Longitude")
@@ -1735,7 +1741,7 @@ ecoregions2 <- readOGR('data/EcoRegions', 'Caribbean_ecoregions')
 Bahamian_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Bahamian", ]
 ECarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Eastern Caribbean", ]
 FL_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Floridian", ]
-Antillies_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Greater Antilles", ]
+Antilles_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Greater Antilles", ]
 SCarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Southern Caribbean", ]
 SWCarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Southwestern Caribbean", ]
 WCarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Western Caribbean", ]
@@ -1745,7 +1751,7 @@ WCarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Western Caribbean", 
 Bahamian_reefs <- shapes[Bahamian_ecoreg,]
 ECarib_reefs <- shapes[ECarib_ecoreg,]
 FL_reefs <- shapes[FL_ecoreg,]
-Antillies_reefs <- shapes[Antillies_ecoreg,]
+Antilles_reefs <- shapes[Antilles_ecoreg,]
 SCarib_reefs <- shapes[SCarib_ecoreg,]
 SWCarib_reefs <- shapes[SWCarib_ecoreg,]
 WCarib_reefs <- shapes[WCarib_ecoreg,]
@@ -1757,7 +1763,6 @@ WCarib_reefs <- shapes[WCarib_ecoreg,]
 # PLot the reefs as points, coloured by region
 eco_reef_map <- ggplot() +
     #geom_rect(aes(xmin=-Inf,xmax=Inf,ymin=-Inf, ymax=41.5), fill="#666666") +
-    geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
     coord_sf(xlim = c(-95,-55), ylim = c(8,33)) +
     ylab("Latitude") +
     xlab("Longitude") +
@@ -1766,10 +1771,11 @@ eco_reef_map <- ggplot() +
     geom_point(data = Bahamian_reefs, aes(x=long, y = lat, group = group), fill = "#1B9E77", color='#1B9E77', size = 0.2) +
     geom_point(data = ECarib_reefs, aes(x=long, y = lat, group = group), fill = "#D95F02", color='#D95F02', size = 0.2) +
     geom_point(data = FL_reefs, aes(x=long, y = lat, group = group), fill = "#7570B3", color='#7570B3', size = 0.2) +
-    geom_point(data = Antillies_reefs, aes(x=long, y = lat, group = group), fill = "#E7298A", color='#E7298A', size = 0.2) +
+    geom_point(data = Antilles_reefs, aes(x=long, y = lat, group = group), fill = "#E7298A", color='#E7298A', size = 0.2) +
     geom_point(data = SCarib_reefs, aes(x=long, y = lat, group = group), fill = "#66A61E", color='#66A61E', size = 0.2) +
     geom_point(data = SWCarib_reefs, aes(x=long, y = lat, group = group), fill = "#E6AB02", color='#E6AB02', size = 0.2) +
-    geom_point(data = WCarib_reefs, aes(x=long, y = lat, group = group), fill = "#A6761D", color='#A6761D', size = 0.2  
+    geom_point(data = WCarib_reefs, aes(x=long, y = lat, group = group), fill = "#A6761D", color='#A6761D', size = 0.2) +
+    geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1)
 
 
 # Plot actual shape polygons, coloured by region
@@ -1783,7 +1789,7 @@ eco_reef_map <- ggplot() +
 #    geom_polygon(data = Bahamian_reefs, aes(x=long, y = lat, group = group), fill = "#1B9E77", color='#1B9E77', lwd = 0.1) +
 #    geom_polygon(data = ECarib_reefs, aes(x=long, y = lat, group = group), fill = "#D95F02", color='#D95F02', lwd = 0.1) +
 #    geom_polygon(data = FL_reefs, aes(x=long, y = lat, group = group), fill = "#7570B3", color='#7570B3', lwd = 0.1) +
-#    geom_polygon(data = Antillies_reefs, aes(x=long, y = lat, group = group), fill = "#E7298A", color='#E7298A', lwd = 0.1) +
+#    geom_polygon(data = Antilles_reefs, aes(x=long, y = lat, group = group), fill = "#E7298A", color='#E7298A', lwd = 0.1) +
 #    geom_polygon(data = SCarib_reefs, aes(x=long, y = lat, group = group), fill = "#66A61E", color='#66A61E', lwd = 0.1) +
 #    geom_polygon(data = SWCarib_reefs, aes(x=long, y = lat, group = group), fill = "#E6AB02", color='#E6AB02', lwd = 0.1) +
 #    geom_polygon(data = WCarib_reefs, aes(x=long, y = lat, group = group), fill = "#A6761D", color='#A6761D', lwd = 0.1) 
@@ -1792,12 +1798,328 @@ eco_reef_map <- ggplot() +
 
 ```{r combined ecoregion map}
 
-plot_grid(ecoreg_map, eco_reef_map, ncol = 1, labels = c("A", "B"))
+plot_grid(ecoreg_map, eco_reef_map, ncol = 1, labels = c("A", "B")) +
+  ggsave("figures/Fig14_Ecoregions_map.pdf", width = 6, height = 5)
 
 ```
 
 
 **Figure 14 |** Caribbean ecoregions (**A**) as established by Spalding *et al* 2007 included in this analysis and the associate reef locations (**B**). All marine ecoregion shapefiles and accompanying manuscript can be accessed [here](https://www.worldwildlife.org/publications/marine-ecoregions-of-the-world-a-bioregionalization-of-coastal-and-shelf-areas). Based on reef selection at the start of the analysis, both the Bermuda and Southern Gulf of Mexico regions have been excluded from the analysis and reefs along the western coast of Central America have been excluded with these shapes.  
+
+
+```{r ecoregion SST extraction - REMOTE, eval=FALSE, include=FALSE}
+
+# ***NOTE***
+####--- this portion of the script was run on a high performance computing cluster because of the long runtime needed
+####--- see separate R script (Ecoregion_SSTExtraction.R) for instructions (located in the code folder)
+####--- the script can be put on a cluster with the HadISST netCDF, Caribbean reef shapefile, and ecoregion shapefile to run
+
+
+##########################################
+# If working with a smaller data set, you can run the below code to accomplish the same outcome as the Ecoregion_SSTExtraction.R script.
+# The code below has been adapted to specifically work with the HadISST_sst.nc, Caribbean_ecoregions.shp, and Caribbean_reefs.shp files:
+
+## Identify the ecoregion you want to extraact reef SST for (you can run 'ecoregions2@data[["ECOREGION"]]' to list ecoregion names)
+region <- "Bahamian" # specify the name of the data set here
+
+
+### Subset reefs by ecoregions for analyses by region
+ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == region, ] # Select the only the desired ecoregion
+ecoreg_reefs <- shapes[ecoreg,] # Clip the reefs by the selected ecoregion bounds
+
+
+## Load the netCDF as rasterBrick
+raster_brick <- brick(HadISST_sst_path)
+
+## Create an empty dataframe to populate while running the forloop with the following parameters:
+reg_df <- data.frame('date' = integer(),
+                     'mean' = integer(),
+                     'min' = integer(),
+                     'max' = integer(),
+                     'weighted' = integer(),
+                     'difference' = integer(),
+                     'polygon' = integer(),
+                     'ecoregion' = factor())
+
+
+## for loop that runs through each raster layer and extracts the SST corresponding to reef polygons
+for (i in 1:3) { #raster_brick@file@nbands
+  raster <- raster_brick[[i]]
+  
+  mean_sst_vals <- raster::extract(raster, ecoreg_reefs, fun=mean) # calculates a mean SST within each reef polygon
+  min_sst_vals <- raster::extract(raster, ecoreg_reefs, fun=min) # minimum SST within each reef polygon
+  max_sst_vals <- raster::extract(raster, ecoreg_reefs, fun=max) # maximum SST within each reef polygon
+  weighted_mean <- raster::extract(raster, ecoreg_reefs, weights=TRUE, fun=mean) # calculates the weighted mean SST within each reef polygon
+  
+  df <- data.frame('date' = raster@data@names,
+                   'mean' = mean_sst_vals,
+                   'min' = min_sst_vals,
+                   'max' = max_sst_vals,
+                   'weighted' = weighted_mean,
+                   'difference' = mean_sst_vals - weighted_mean)
+
+  df$polygon <- rownames(df) # names the row with polygon ID (numeric IDs)
+  df$ecoregion <- rep(region, length(df$date)) # add a column to identify the ecoregion
+
+  reg_df <- rbind(reg_df, df) # adds the above information for each polygon onto the dataframe containing the other calculated values
+}
+
+
+## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
+# *** Only uncomment these lines if you want to write over existing files ***
+#save(reg_df, file = paste("data/HadISST/Ecoregion_SST/", region, "_reefs.Rdata", sep = ""))
+#write.csv(reg_df, file = paste("data/HadISST/Ecoregion_SST/", region, "_reefs.csv", sep = ""), row.names=FALSE)
+
+```
+
+```{r ecoregion SST GPS extraction, eval=FALSE, include=FALSE}
+
+## Read in the individual ecoregion extracted SST data
+BA_sst <- read.csv("data/HadISST/Ecoregion_SST/Bahamian_reefs.csv") # no NA values for polygons so it is ready!
+EC_sst <- read.csv("data/HadISST/Ecoregion_SST/ECarib_reefs.csv") # no NA values for polygons so it is ready!
+FL_sst <- read.csv("data/HadISST/Ecoregion_SST/FL_reefs.csv") # has some NA values so those need GPS extraction
+SW_sst <- read.csv("data/HadISST/Ecoregion_SST/SWCarib_reefs.csv") # has some NA values so those need GPS extraction
+WC_sst <- read.csv("data/HadISST/Ecoregion_SST/WCarib_reefs.csv") # has some NA values so those need GPS extraction
+SC_sst <- read.csv("data/HadISST/Ecoregion_SST/SCarib_reefs.csv") # has some NA values so those need GPS extraction
+AN_sst <- read.csv("data/HadISST/Ecoregion_SST/Antilles_reefs.csv") # has some NA values so those need GPS extraction
+
+
+### This portion of code needs to be run for the forllowing ecoregions that were missing SST values for some polygons:
+## "Floridian" "Greater Antilles" "Southern Caribbean" "Southwestern Caribbean" "Western Caribbean"
+
+## Select the ecoregion to extract SST by GPS coordinates
+region_name <- "Greater Antilles" # input desired ecoregion here
+region <- AN_sst
+region_reef <- Antilles_reefs
+
+## selected ecoregion dataframe modification
+region_poly <- region[,c(1,8,7,5)] # select only the polygon ID, ecoregion, weighted mean SST, and time 
+region_poly$polygon <- factor(region_poly$polygon)
+region_poly <- spread(region_poly, polygon, weighted) # convert from long to wide format
+
+
+## create dataframe of missing polygon GPS corrdinates to extract from HadISST raster
+NAcol <- colnames(region_poly)[colSums(is.na(region_poly)) > 0] # identify the columns with NA values to pull SST from GPS points instead of polygons
+
+## Convert ecoregion reefs spatial object to simple feature and extract GSP coordinates of polygons
+region_reef_sf <- st_as_sf(region_reef)
+region_reef_pt <- st_coordinates(region_reef_sf) # extracts all the polygon coordinates into a matrix
+region_reef_pt <- as.data.frame(region_reef_pt) # convert from matrix to dataframe
+region_reef_gps <- region_reef_pt %>% filter(L3 == NAcol) # select only GPS points of polygons missing SST data above
+
+## converting sampling points to spatial points and applying projection to points
+LongLat <- cbind(region_reef_gps$X, region_reef_gps$Y) 
+eco_ReefPTS <- SpatialPoints(LongLat)
+proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
+projection(eco_ReefPTS) <- proj
+
+
+#some pixels fall on land. Finding nearest valid pixels
+#pixels coordinates
+eco_brick <- brick(HadISST_sst_path)
+first_day <- eco_brick[[1]]
+pixel_coordinates <- coordinates(first_day)
+#delete coordinates where data is missing (NA)
+#first, extract data for all pixels
+data <- raster::extract(first_day, pixel_coordinates)
+#now check which ones are NA and delete those entries from the "pixel.coordinates" list
+pixel_coordinates <- pixel_coordinates[!is.na(data),]
+
+
+#create new sampling points, shifted to the center of the pixel they fall on, or to the near pixel in case that one is NA
+eco_ReefPTS_shifted <- vector()
+#loop cycling through sampling points
+for (p in 1:length(eco_ReefPTS)) {
+  #geodesic distances
+  distances <- rdist.earth(coordinates(eco_ReefPTS[p]),pixel_coordinates,miles=FALSE)
+  #coordinates of the pixel that is at shorter distance 
+  shifted_coordinates <- pixel_coordinates[which.min(distances),]
+  #assigning those coordinates to a new item
+  cmd <- paste0("sp.",p,"<-shifted_coordinates")
+  eval(parse(text=cmd))
+  #points(pt[1],pt[2])
+  cmd <- paste0("eco_ReefPTS_shifted<-rbind(eco_ReefPTS_shifted,sp.",p,")")
+  eval(parse(text = cmd))
+}
+
+
+
+# extract data from the sst brick with the sampling points shifted
+eco_sst <- raster::extract(eco_brick, eco_ReefPTS_shifted)
+
+
+# load in the time data again for HadISST and modify to selected range
+load("data/HadISST/HadISST_times.Rdata")
+Tstart_index <- min(which(difftime(nc_times,start_date)>0))
+Tend_index <- min(which(difftime(nc_times,"2020-04-16")>0))
+time <- nc_times[Tstart_index:Tend_index]
+
+# convert the data matrix to a xts object
+eco_sst_xts <- xts(t(eco_sst), time) #t is used to transpose the matrix because xts assumes dates are along the lines, not columns
+colnames(eco_sst_xts) <- region_reef_gps$L3 #ID the columns
+
+eco_sst_df <- data.frame(date=index(t(eco_sst_xts)), coredata(t(eco_sst_xts)))
+eco_sst_df$polygon <- factor(region_reef_gps$L3) #ID the columns
+eco_sst_df$date <- NULL
+
+eco_sst_long <- gather(eco_sst_df, date, sst, X1870.01.16.15.00.00:X2020.04.16.15.00.00)
+
+
+eco_gps <- aggregate(eco_sst_long, by = list(eco_sst_long$date, eco_sst_long$polygon), FUN = mean)[,c(1:2,5)]
+eco_gps2 <- eco_gps %>% separate(Group.1, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
+eco_gps2$date <- paste(eco_gps2$year, eco_gps2$month, eco_gps2$day, sep = ".")
+
+eco_gps2 <- eco_gps2[, c(7,9,8)]
+eco_gps2 <- spread(eco_gps2, Group.2, sst)
+
+
+region_poly <- select(region_poly, -c(NAcol)) # remove the NA columns before adding them back in below
+
+eco_full <- region_poly %>% 
+  left_join(eco_gps2, by = c("date" = "date"))
+
+
+write.csv(eco_full, file = paste("data/HadISST/Ecoregion_SST/", gsub(" ", "", region_name, fixed = TRUE), "_reefs_gps.csv", sep = ""), row.names=FALSE)
+
+```
+
+<br/>
+
+```{r ecoregion monthly SST dataframe construction}
+
+## Read in the individual ecoregion extracted SST data (these are the full df when GPS extraction needed to happen)
+BA_sst <- read.csv("data/HadISST/Ecoregion_SST/Bahamian_reefs.csv")
+EC_sst <- read.csv("data/HadISST/Ecoregion_SST/ECarib_reefs.csv")
+FL_sst <- read.csv("data/HadISST/Ecoregion_SST/Floridian_reefs_gps.csv") 
+SW_sst <- read.csv("data/HadISST/Ecoregion_SST/SouthwesternCaribbean_reefs_gps.csv")
+WC_sst <- read.csv("data/HadISST/Ecoregion_SST/WesternCaribbean_reefs_gps.csv")
+SC_sst <- read.csv("data/HadISST/Ecoregion_SST/SouthernCaribbean_reefs_gps.csv")
+AN_sst <- read.csv("data/HadISST/Ecoregion_SST/GreaterAntilles_reefs_gps.csv")
+
+
+## Adjust BA and EC from long to wide to match others
+BA_sst <- BA_sst[,c(1,8,7,5)] # select only the polygon ID, ecoregion, weighted mean SST, and time 
+EC_sst <- EC_sst[,c(1,8,7,5)]
+
+
+FL_sst <- gather(FL_sst, polygon, weighted, X14:X27)
+SW_sst <- gather(SW_sst, polygon, weighted, X1:X55)
+WC_sst <- gather(WC_sst, polygon, weighted, X1:X73)
+SC_sst <- gather(SC_sst, polygon, weighted, X1:X169)
+AN_sst <- gather(AN_sst, polygon, weighted, X1:X184)
+
+## Combine all ecoregion SST dataframes into one and modify for plotting
+ecoregion_sst <- rbind(BA_sst, EC_sst, FL_sst, SW_sst, WC_sst, SC_sst, AN_sst)
+ecoregion_sst$polygon <- as.factor(gsub("\\X", "", ecoregion_sst$polygon)) # convert the year column to numerics and remove 'X'
+#ecoregion_sst$polygon2 <- paste(ecoregion_sst$polygon, ecoregion_sst$ecoregion, sep = "_")
+#ecoregion_sst$polygon <- NULL
+ecoregion_sst2 <- spread(ecoregion_sst, polygon, weighted) # convert from long to wide format
+
+
+
+## create a new dataframe of simple stats per time
+eco_sst_full <- data.frame("date" = ecoregion_sst2[,1],
+                           "ecoregion" = ecoregion_sst2[,2],
+                           "mean_temp" = rowMeans(ecoregion_sst2[,-c(1:2)], na.rm = TRUE),
+                           "max_temp" = apply(ecoregion_sst2[,-c(1:2)], 1, FUN=max, na.rm = TRUE),
+                           "min_temp" = apply(ecoregion_sst2[,-c(1:2)], 1, FUN=min, na.rm = TRUE))
+
+eco_sst_full <- eco_sst_full %>% separate(date, c("year", "month", "day"), convert = TRUE) # create year, month, and day column columns
+eco_sst_full$year <- as.numeric(gsub("\\X", "", eco_sst_full$year)) # convert the year column to numerics and remove 'X'
+eco_sst_full$month2 <- factor(eco_sst_full$month) # make a month as a factor column for plotting
+
+```
+
+```{r ecoregion monthly SST per year, fig.align='center', fig.height=10, fig.width=10}
+
+#### Data visualization of monthly SST per year #### 
+
+# calculate summary statistic per month across years
+eco_month_avg <- eco_sst_full %>% 
+  group_by(ecoregion, month) %>% 
+  summarize(mean = mean(mean_temp, na.rm = TRUE),
+            sd = sd(mean_temp, na.rm = TRUE),
+            n = n()) %>% 
+  mutate(se = sd / sqrt(n),
+         lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
+         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
+
+# make year integer for better plotting
+eco_sst_full$year <- as.integer(eco_sst_full$year)
+
+## create plots of monthly HadISST per year
+# markdown plot
+ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 70, hjust = 1)) +
+  geom_line(data = eco_sst_full, aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.2) +
+  scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(eco_sst_full$year), space="Lab") +
+  scale_x_continuous(name = "", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
+  scale_y_continuous(breaks = seq(22, 32, 1)) +
+  ylab('SST (°C)') +
+  facet_wrap(~ecoregion, ncol = 2) +
+  guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
+  ggsave("figures/Fig15_Ecoregion_SST_monthly.pdf", width = 7, height = 6.8)
+
+```
+
+**Figure 15 |** Mean SST across coral reefs within each Caribbean Ecoregion at monthly sampling event (HadISST dataset) from 1870 to 2019. Year is represented by colour of each line, changing from <span style="color: #2166ac;">blue</span> to <span style="color: #d6604d;">red</span> in more recent years.
+
+
+<br/>
+
+```{r ecoregion annual SST, fig.height=10, fig.width=10}
+
+#### Data visualization per year across months #### 
+
+# calculate summary statistic per month across years
+ecoregion_year_avg <- eco_sst_full %>% 
+  group_by(ecoregion, year) %>% 
+  summarize(mean = mean(mean_temp, na.rm = TRUE),
+            max = max(mean_temp, na.rm = TRUE),
+            min = min(mean_temp, na.rm = TRUE),
+            sd = sd(mean_temp, na.rm = TRUE),
+            n = n()) %>% 
+  mutate(se = sd / sqrt(n),
+         lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
+         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
+
+
+## plot with smoothed trend
+ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
+  geom_hline(yintercept = mean(ecoregion_year_avg$mean), colour = "grey", linetype = 2) +
+  geom_ribbon(data = ecoregion_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
+  #geom_line(data = ecoregion_year_avg, aes(x = year, y = mean), colour = "black", group = 1, size = 1.2) +
+  scale_x_continuous(name = "", breaks = seq(1880, 2019, 20)) +
+  ylab('SST (°C)') +
+  geom_line(data = ecoregion_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
+  geom_line(data = ecoregion_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
+  geom_smooth(data = ecoregion_year_avg, method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE) + # smoothed mean temp
+  coord_cartesian(xlim = c(1870, 2019)) +
+  scale_y_continuous(breaks = seq(22, 32, 1)) +
+  facet_wrap(~ecoregion, ncol = 2) +
+  ggsave("figures/Fig16_Ecoregion_SST_annual.pdf", width = 8, height = 7)
+
+```
+
+**Figure 16 |** Annual mean SST (HadISST) recorded on reefs within each ecoregion (black line - *as calculated using the geom_smooth function fit with a general addative model*) and 95% confidence interval (grey ribbon). The <span style="color: #2166ac;">blue</span> line represents the annual minimum SST across sites within a specific ecoregion and the <span style="color: #d6604d;">red</span> line depicts the maximum SST across sites within an ecoregion per year. The grey horizontal dotted line represented the overall mean SST across all reefs within the Caribbean.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 <br/><br/>
