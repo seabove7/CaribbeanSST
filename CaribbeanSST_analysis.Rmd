@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 ```{r load libraries}
 
 ### Used packages that need to be installed to run code:
-# install.packages("sf", "ncdf4", "raster", "maptools", "rgdal", "ggplot2", "tidyverse", "xts", "RColorBrewer", "tidyr", "dplyr", "fields", "gganimate", "sp", "plotly", "grDevices", "repmis", "binr", "cowplot", viridis)
+# install.packages("sf", "ncdf4", "raster", "ggrepel", "maptools", "rgdal", "ggplot2", "tidyverse", "xts", "RColorBrewer", "tidyr", "dplyr", "fields", "gganimate", "sp", "plotly", "grDevices", "repmis", "binr", "cowplot", viridis)
 
 # library(devtools)
 # devtools::install_github("NCAR/fields")
@@ -31,6 +31,7 @@ knitr::opts_chunk$set(
 
 library(sf)
 library(ncdf4)
+library(ggrepel)
 library(raster) 
 library(viridis)
 library(maptools)
@@ -155,7 +156,7 @@ ggplot() +
 
 ```
 
-**Figure 1 |** Map of reefs included in SST analyses specific to reef locations. Reef shape files were obtained from the [UN Environment World Conservation Monitoring Centre](http:/data.unep-wcmc.org/datasets/1).
+**Figure 1 |** Map of reefs included in SST analyses specific to reef locations. Reef shape files were obtained from the [UN Environment World Conservation Monitoring Centre](http:/data.unep-wcmc.org/datasets/1). Coral reef shapefiles were downloaded 30 June 2020.
 
 <br/>
 
@@ -175,7 +176,7 @@ A custom cluster was created to extract SST data on a loop from HadISST and Path
 
 HadISST reports monthly SSTs at 1$^\circ$ resolution. [Data can be accessed here](https://www.metoffice.gov.uk/hadobs/hadisst/). According to their website:
 
-> "HadISST uses reduced space optimal interpolation applied to SSTs from the Marine Data Bank (mainly ship tracks) and ICOADS through 1981 and a blend of in-situ and adjusted satellite-derived SSTs for 1982-onwards."
+> "The SST data are taken from the Met Office Marine Data Bank (MDB), which from 1982 onwards also includes data received through the Global Telecommunications System (GTS). In order to enhance data coverage, monthly median SSTs for 1871-1995 from the Comprehensive Ocean-Atmosphere Data Set (COADS) (now ICOADS) were also used where there were no MDB data. The sea ice data are taken from a variety of sources including digitized sea ice charts and passive microwave retrievals."
 
 ```{r HadISST raster}
 
@@ -556,10 +557,29 @@ ggplot() +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
   geom_line(data = HADI_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
   geom_line(data = HADI_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
-  geom_smooth(data = HADI_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE) + # smoothed mean temp
+  geom_smooth(data = HADI_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp  
   ggtitle("HadISST (1870 - 2019)") +
   coord_cartesian(xlim = c(1870, 2019)) +
   ggsave("figures/Fig3_HadISST_SST_annual.pdf", width = 6, height = 4)
+
+
+
+#ggplot() +
+#  theme_bw() +
+#  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), #strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
+#  geom_vline(xintercept = 1981, colour = "lightgrey") +
+#  geom_hline(yintercept = mean(HADI_year_avg[-151,]$mean), colour = "grey", linetype = 2) +
+#  geom_ribbon(data = HADI_year_avg[-151,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha #= 0.3, linetype = 1) + 
+#  #geom_line(data = HADI_year_avg[-151,], aes(x = year, y = mean), colour = "black", group = 1, size = 1.2) +
+#  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2019)) +
+#  ylab('SST (°C)') +
+#  scale_y_continuous(breaks = seq(24, 30, 1)) +
+#  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
+#  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
+#  geom_smooth(data = HADI_year_avg[-151,], method = "glm", aes(x = year, y = mean), colour = "black", group = 1, size #= 1, se = FALSE) + # smoothed mean temp
+#  ggtitle("HadISST (1870 - 2019)") +
+#  coord_cartesian(xlim = c(1870, 2019)) +
+#  ggsave("figures/Fig3_HadISST_SST_annual.pdf", width = 6, height = 4)
 
 ```
 
@@ -863,6 +883,7 @@ path_full$date.y <- NULL
 
 <br/>
 
+
 ```{r path monthly SST dataframe construction}
 
 ## create a new dataframe of simple stats per time
@@ -879,7 +900,7 @@ path_full2$month2 <- factor(path_full2$month) # make a month as a factor column 
 
 ```{r path monthly SST per year, fig.align='center'}
 
-## calculate summary statistic per month across years
+## calculate summary statistic per month across years (currently, this is not being included in this plot: see the geom_ribbon/geom_line lines in plot)
 Path_month_avg <- path_full2 %>% 
   group_by(month) %>% 
   summarize(mean = mean(mean_temp, na.rm = TRUE),
@@ -898,7 +919,7 @@ hadplot_markdown <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1)) +
   guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
-  geom_line(data = path_full2[-151,], aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
+  geom_line(data = path_full2, aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
   scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(path_full2$year), space="Lab") +
   #geom_ribbon(data = Path_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
   #geom_line(data = Path_month_avg, aes(x = month, y = mean), colour = "black", group = 1, size = 1.5) +
@@ -914,7 +935,7 @@ path_plot_gif <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1)) +
   guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
-  geom_line(data = path_full2[-151,], aes(x = month, y = mean_temp, group = year, colour = year), size = 1) +
+  geom_line(data = path_full2, aes(x = month, y = mean_temp, group = year, colour = year), size = 1) +
   scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(path_full2$year), space="Lab") +
   #geom_ribbon(data = Path_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
   #geom_line(data = Path_month_avg, aes(x = month, y = mean), colour = "black", group = 1, size = 1.5) +
@@ -962,15 +983,15 @@ Path_year_avg <- path_full2 %>%
 ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
-  geom_hline(yintercept = mean(Path_year_avg[-151,]$mean), colour = "grey", linetype = 2) +
-  geom_ribbon(data = Path_year_avg[-151,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) +
-  #geom_line(data = Path_year_avg[-151,], aes(x = year, y = mean), colour = "black", group = 1, size = 1.2) +
+  geom_hline(yintercept = mean(Path_year_avg$mean), colour = "grey", linetype = 2) +
+  geom_ribbon(data = Path_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) +
+  #geom_line(data = Path_year_avg, aes(x = year, y = mean), colour = "black", group = 1, size = 1.2) +
   scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2019)) +
   ylab('SST (°C)') +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
-  geom_line(data = Path_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
-  geom_line(data = Path_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
-  geom_smooth(data = Path_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE) + # smoothed mean temp
+  geom_line(data = Path_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
+  geom_line(data = Path_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
+  geom_smooth(data = Path_year_avg, method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE) + # smoothed mean temp
   ggtitle("Pathfinder (1981 - 2019)") +
   coord_cartesian(xlim = c(1870, 2019)) +
   ggsave("figures/Fig5_Pathfinder_SST_annual.pdf", width = 6, height = 4)
@@ -2028,9 +2049,8 @@ eco_sst_full$month2 <- factor(eco_sst_full$month) # make a month as a factor col
 
 ```
 
-```{r ecoregion monthly SST per year, fig.align='center', fig.height=11, fig.width=10}
+```{r ecoregion monthly SST per year, fig.align='center', fig.height=10, fig.width=9}
 
-#### Data visualization of monthly SST per year #### 
 
 # calculate summary statistic per month across years
 eco_month_avg <- eco_sst_full %>% 
@@ -2041,6 +2061,23 @@ eco_month_avg <- eco_sst_full %>%
   mutate(se = sd / sqrt(n),
          lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
          upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
+
+
+# Create overall mean SST per ecoregion for plotting
+eco_month_avg_mean <- eco_sst_full %>% 
+  group_by(ecoregion) %>% 
+  summarize(max = round(max(mean_temp, na.rm = TRUE), 2),
+            min = round(min(mean_temp, na.rm = TRUE), 2))
+
+
+# Add '(mean SST: XX)' to each ecoregion label
+labs <- paste(levels(eco_month_avg_mean$ecoregion), " (max = ", eco_month_avg_mean$max, "; min = ", eco_month_avg_mean$min, "°C)", sep = "")
+
+# Name existing facet labels based on new labels for plot 
+facet_labs <- c("Bahamian" = labs[1], "Eastern Caribbean" = labs[2], "Floridian" = labs[3], "Southwestern Caribbean" = labs[4], "Western Caribbean" = labs[5], "Southern Caribbean" = labs[6], "Greater Antilles" = labs[7])
+
+
+#### Data visualization of monthly SST per year #### 
 
 # make year integer for better plotting
 eco_sst_full$year <- as.integer(eco_sst_full$year)
@@ -2055,9 +2092,9 @@ ggplot() +
   scale_x_continuous(name = "", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
   scale_y_continuous(breaks = seq(22, 32, 1)) +
   ylab('SST (°C)') +
-  facet_wrap(~ecoregion, ncol = 2) +
+  facet_wrap(~ecoregion, ncol = 2, labeller = labeller(ecoregion = facet_labs)) +
   guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
-  ggsave("figures/Fig15_Ecoregion_SST_monthly.pdf", width = 7, height = 6.8)
+  ggsave("figures/Fig15_Ecoregion_SST_monthly.pdf", width = 7, height = 8)
 
 ```
 
@@ -2066,39 +2103,60 @@ ggplot() +
 
 <br/>
 
-```{r ecoregion annual SST, fig.height=13, fig.width=10}
+```{r ecoregion annual SST, fig.height=9, fig.width=9}
 
-#### Data visualization per year across months #### 
+# Subset out 2020 data 
+eco_sst_full <- subset(eco_sst_full, year != "2020")
 
-# calculate summary statistic per month across years
+
+# Calculate summary statistic per month across years
 ecoregion_year_avg <- eco_sst_full %>% 
   group_by(ecoregion, year) %>% 
   summarize(mean = mean(mean_temp, na.rm = TRUE),
             max = max(mean_temp, na.rm = TRUE),
             min = min(mean_temp, na.rm = TRUE),
+            range = max - min,
             sd = sd(mean_temp, na.rm = TRUE),
             n = n()) %>% 
   mutate(se = sd / sqrt(n),
          lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
          upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
 
+# Create overall mean SST per ecoregion for plotting
+ecoregion_year_mean <- eco_sst_full %>% 
+  group_by(ecoregion) %>% 
+  summarize(mean = round(mean(mean_temp, na.rm = TRUE), 2),
+            range = round(mean((max(mean_temp, na.rm = TRUE) - min(mean_temp, na.rm = TRUE)), na.rm = TRUE), 2))
 
-## plot with smoothed trend
+
+
+# Add '(mean SST: XX)' to each ecoregion label
+labels <- paste(levels(ecoregion_year_mean$ecoregion), " (mean: ", ecoregion_year_mean$mean, "; range: ", ecoregion_year_mean$range, "°C)", sep = "")
+
+# Name existing facet labels based on new labels for plot 
+facet_labels <- c("Bahamian" = labels[1], "Eastern Caribbean" = labels[2], "Floridian" = labels[3], "Southwestern Caribbean" = labels[4], "Western Caribbean" = labels[5], "Southern Caribbean" = labels[6], "Greater Antilles" = labels[7])
+
+
+#### Data visualization per year across months #### 
+
+## Plot with smoothed trend
 ggplot() +
   theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
-  geom_hline(yintercept = mean(ecoregion_year_avg$mean), colour = "grey", linetype = 2) +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 30, hjust = 0.8)) +
+  #geom_point(data = ecoregion_year_mean, aes(x = 2019, y = mean), colour = "white") +  
+  geom_segment(data = ecoregion_year_avg, aes(y = mean(mean), yend = mean(mean), x = 1870, xend = 2019), colour = "grey", linetype = 2) +
+  #geom_label_repel(data = ecoregion_year_mean, aes(x = 2019, y = mean, label = mean), nudge_y = -5.6, nudge_x = 3, label.size = NA, size = 2.7, segment.size = 0.3) +
   geom_ribbon(data = ecoregion_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
   #geom_line(data = ecoregion_year_avg, aes(x = year, y = mean), colour = "black", group = 1, size = 1.2) +
   scale_x_continuous(name = "", breaks = seq(1880, 2019, 20)) +
   ylab('SST (°C)') +
   geom_line(data = ecoregion_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
   geom_line(data = ecoregion_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
-  geom_smooth(data = ecoregion_year_avg, method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE) + # smoothed mean temp
+  geom_smooth(data = ecoregion_year_avg, method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 0.5, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp
   coord_cartesian(xlim = c(1870, 2019)) +
-  scale_y_continuous(breaks = seq(22, 32, 1)) +
-  facet_wrap(~ecoregion, ncol = 2) +
-  ggsave("figures/Fig16_Ecoregion_SST_annual.pdf", width = 8, height = 7)
+  scale_y_continuous(breaks = seq(22, 32, 2)) +
+  facet_wrap(~ ecoregion, ncol = 2, labeller = labeller(ecoregion = facet_labels)) +
+  ggsave("figures/Fig16_Ecoregion_SST_annual.pdf", width = 7, height = 8)
 
 ```
 
