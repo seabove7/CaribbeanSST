@@ -481,9 +481,10 @@ had_full2$year <- as.integer(had_full2$year)
 hadplot_markdown <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = c(0.05, 0.9), legend.key.size = unit(0.3, "cm"), legend.text = element_text(size = 7), legend.background = element_rect(fill = NA)) + # legend theme
   guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
   geom_line(data = had_full2[-151,], aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
-  scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(had_full2$year), space="Lab") +
+  scale_colour_gradient2("", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(had_full2$year), space="Lab") +
   #geom_ribbon(data = HADI_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
   #geom_line(data = HADI_month_avg, aes(x = month, y = mean), colour = "black", group = 1, size = 1.5) +
   scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
@@ -545,10 +546,10 @@ HADI_year_avg <- had_full2 %>%
 
 
 ## plot with smoothed trend
-ggplot() +
+HadISST_SST_plot <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
-  geom_vline(xintercept = 1981, colour = "lightgrey") +
+  #geom_vline(xintercept = 1981, colour = "lightgrey") +
   geom_hline(yintercept = mean(HADI_year_avg[-151,]$mean), colour = "grey", linetype = 2) +
   geom_ribbon(data = HADI_year_avg[-151,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
   #geom_line(data = HADI_year_avg[-151,], aes(x = year, y = mean), colour = "black", group = 1, size = 1.2) +
@@ -558,9 +559,10 @@ ggplot() +
   geom_line(data = HADI_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
   geom_line(data = HADI_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
   geom_smooth(data = HADI_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp  
-  ggtitle("HadISST (1870 - 2019)") +
+  #ggtitle("HadISST (1870 - 2019)") +
   coord_cartesian(xlim = c(1870, 2019)) +
   ggsave("figures/Fig3_HadISST_SST_annual.pdf", width = 6, height = 4)
+
 
 
 
@@ -584,6 +586,15 @@ ggplot() +
 ```
 
 **Figure 3 |** Annual mean SST (HadISST) across reef sites (black line - as calculated using the geom_smooth function fit with a general addative model) and 95% confidence interval (grey ribbon). The <span style="color: #2166ac;">blue</span> line represents the annual minimum SST across sites and the <span style="color: #d6604d;">red</span> line depicts the maximum SST across sites per year. The grey horizontal dotted line represented the overall mean SST of the full dataset, and the grey verticle line denotes when the subset of data matching the Pathfinder SST begins.
+
+
+```{r include=FALSE}
+
+# Saves the manuscript version of the HadISST historic SST
+plot_grid(hadplot_markdown, HadISST_SST_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
+  ggsave("figures/Manuscript_figs/Fig3_SST_trends.pdf", width = 6, height = 7.5)
+
+```
 
 
 <br/><br/><br/>
