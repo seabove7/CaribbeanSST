@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 ```{r load libraries}
 
 ### Used packages that need to be installed to run code:
-# install.packages("sf", "ncdf4", "raster", "ggrepel", "maptools", "rgdal", "ggplot2", "tidyverse", "xts", "RColorBrewer", "tidyr", "dplyr", "fields", "gganimate", "sp", "plotly", "grDevices", "repmis", "binr", "cowplot", viridis)
+# install.packages("sf", "ncdf4", "raster", "ggrepel", "maptools", "rgdal", "ggplot2", "tidyverse", "xts", "RColorBrewer", "tidyr", "dplyr", "fields", "gganimate", "sp", "plotly", "grDevices", "repmis", "binr", "cowplot", "viridis")
 
 # library(devtools)
 # devtools::install_github("NCAR/fields")
@@ -441,6 +441,67 @@ save(had_full, file = "data/HadISST/HadISST_reefs_gps.Rdata")
 
 ```
 
+```{r UPDATED had GPS extraction, eval=FALSE, include=FALSE}
+
+reef_gps <- read.csv("data/ReefData/CaribbeanReef_points.csv") # read in FULL reef locations csv
+
+## convert sampling points to spatial points and applying projection to points
+LongLat <- cbind(reef_gps$lon, reef_gps$lat) 
+ReefPTS <- SpatialPoints(LongLat)
+proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
+projection(ReefPTS) <- proj
+
+## shift points (some pixels fall on land so finding nearest valid pixels
+# pixels coordinates
+first_day <- data_brick[[1]]
+pixel_coordinates <- coordinates(first_day)
+
+# delete coordinates where data is missing (NA)
+data <- raster::extract(first_day, pixel_coordinates) # extract data for all pixels
+pixel_coordinates <- pixel_coordinates[!is.na(data),] # remove NA from the "pixel.coordinates" list
+
+# Create new sampling points, shifted to the center of the pixel they fall on, or to the near pixel in case that one is NA
+ReefPTS_shifted <- vector()
+#loop cycling through sampling points
+for (p in 1:length(ReefPTS)) {
+  #geodesic distances
+  distances <- rdist.earth(coordinates(ReefPTS[p]),pixel_coordinates,miles=FALSE)
+  #coordinates of the pixel that is at shorter distance 
+  shifted_coordinates <- pixel_coordinates[which.min(distances),]
+  #assigning those coordinates to a new item
+  cmd <- paste0("sp.",p,"<-shifted_coordinates")
+  eval(parse(text=cmd))
+  #points(pt[1],pt[2])
+  cmd <- paste0("ReefPTS_shifted<-rbind(ReefPTS_shifted,sp.",p,")")
+  eval(parse(text = cmd))
+}
+
+
+## extract data from the sst brick with the sampling points shifted
+had_sst <- raster::extract(data_brick, ReefPTS_shifted)
+
+
+
+## convert the data matrix to a final dataframe
+had_sst_xts <- xts(t(had_sst), time) # t is used to transpose the matrix because xts assumes dates are along the lines, not columns
+had_sst_df <- data.frame(date=index(t(had_sst_xts)), coredata(t(had_sst_xts))) # convert xts object to dataframe
+had_sst_df$reef <- factor(seq(1, length(had_sst_df$date), 1)) # ID the columns to identify unique reefs
+had_sst_df$date <- NULL # remove this column since it is repetitive 
+had_sst_long <- gather(had_sst_df, date, sst, X1870.01.16.15.00.00:X2020.01.16.15.00.00) # convert from wide to long format
+
+## update the dataframe for saving
+had_gps <- had_sst_long %>% separate(date, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
+had_gps$date <- paste(had_gps$year, had_gps$month, had_gps$day, sep = ".") # creates a full date column (XYear.Month.Day)
+had_gps <- had_gps[, -c(5:7)] # remove columns for hour, minute, and seconds (we won't use these)
+had_gps <- spread(had_gps, reef, sst)
+
+## save the final dataframe (.csv or Rdata)
+#write.csv(had_gps, file = "data/HadISST/HadISST_reefs_SST_update.csv") # to save file as .csv
+save(had_gps, file = "data/HadISST/HadISST_reefs_SST_update.Rdata") # to save file as Rdata 
+
+```
+
+
 <br/>
 
 ```{r had monthly SST dataframe construction}
@@ -558,7 +619,7 @@ HadISST_SST_plot <- ggplot() +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
   geom_line(data = HADI_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
   geom_line(data = HADI_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
-  geom_smooth(data = HADI_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp  
+  geom_smooth(data = HADI_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE, formula = y ~ s(x, bs = "cc")) + # smoothed mean temp  
   #ggtitle("HadISST (1870 - 2019)") +
   coord_cartesian(xlim = c(1870, 2019)) +
   ggsave("figures/Fig3_HadISST_SST_annual.pdf", width = 6, height = 4)
