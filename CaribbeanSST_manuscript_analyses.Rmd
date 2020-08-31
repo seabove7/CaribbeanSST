@@ -2233,24 +2233,25 @@ reef_gps <- read.csv("data/ReefData/CaribbeanReef_points.csv") # read in FULL re
 
 ## Read in the clipped Caribbean ecoregion shapefile
 ecoreg <- read_sf("data/EcoRegions/Caribbean_ecoregions.shp")
+ecoregions2 <- readOGR('data/EcoRegions', 'Caribbean_ecoregions') 
 
 ## Subset the shapefile further for the TNA province and remove Bermuda and SGoM ecoregions
 carib_ecoreg <- ecoreg %>% 
   filter(PROVINCE =="Tropical Northwestern Atlantic" & ECOREGION != "Bermuda") 
 
 ## Plot the ecoregions on the Caribbean map
-ggplot(carib_ecoreg) + 
-  geom_sf(colour = "black", aes(fill = ECOREGION), alpha = 0.5) +
-  scale_fill_brewer("Ecoregion", palette = "Set2") +
-  theme_bw() +
-  geom_point(data = reef_gps, aes(x = lon, y = lat), colour = "blue", size = 0.5) +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
-  geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  #geom_point(data = reef_pt, aes( x = X, y = Y), colour = "black", size = 0.1) +
-  coord_sf(xlim = c(-95,-55), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude")
-
+#ggplot(carib_ecoreg) + 
+#  geom_sf(colour = "black", aes(fill = ECOREGION), alpha = 0.5) +
+#  scale_fill_brewer("Ecoregion", palette = "Set2") +
+#  theme_bw() +
+#  geom_point(data = reef_gps, aes(x = lon, y = lat), colour = "blue", size = 0.5) +
+#  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), #strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
+#  geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) #+
+#  #geom_point(data = reef_pt, aes( x = X, y = Y), colour = "black", size = 0.1) +
+#  coord_sf(xlim = c(-95,-55), ylim = c(8,33)) +
+#  ylab("Latitude") +
+#  xlab("Longitude")
+#
 
 
 
@@ -2261,9 +2262,11 @@ ggplot(carib_ecoreg) +
 reef_points <- reef_gps %>%
   mutate(reef_id = as.numeric(interaction(lat, lon, drop=TRUE))) %>%
   filter()
+
 #2 promote the input lists to SpatialPointsDataFrames
 coordinates(reef_points) <- c("lon", "lat")  
 projection(reef_points) <- proj
+projection(ecoregions2) <- proj
 
 
 
@@ -2275,7 +2278,7 @@ compiled_eco_df <- data.frame('lat' = integer(),
                               'n' = integer())
 
 for(e in 1:length(eco_list)) {
-  ecoregion_name <- eco_list[[e]]
+  ecoregion_name <- eco_list[[2]]
   subset_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == ecoregion_name, ]
   projection(subset_ecoreg) <- proj
   ecoregion_reefs <- reef_points[subset_ecoreg, ]
