@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 ```{r load libraries}
 
 ### Used packages that need to be installed to run code:
-# install.packages("sf", "ncdf4", "raster", "ggrepel", "maptools", "rgdal", "ggplot2", "tidyverse", "xts", "RColorBrewer", "tidyr", "dplyr", "fields", "gganimate", "sp", "plotly", "grDevices", "repmis", "binr", "cowplot", "viridis")
+# install.packages("sf", "ncdf4", "raster", "ggrepel", "maptools", "rgdal", "ggplot2", "tidyverse", "xts", "RColorBrewer", "tidyr", "dplyr", "fields", "gganimate", "sp", "plotly", "grDevices", "repmis", "binr", "cowplot", "viridis", "rnaturalearth", "rnaturalearthdata")
 
 # library(devtools)
 # devtools::install_github("NCAR/fields")
@@ -39,6 +39,7 @@ library(rgdal)
 library(ggplot2)
 library(cowplot)
 library(tidyverse)
+library(rnaturalearth)
 library(xts)
 library(RColorBrewer)
 library(tidyr)
@@ -59,7 +60,7 @@ library(repmis)
 date <- Sys.Date() 
 
 ## spatial subsetting for Caribbean region
-Xmin<- -95
+Xmin<- -100
 Xmax<- -55
 Ymin<- 0
 Ymax<- 40
@@ -1777,105 +1778,106 @@ Here, I plan to work on binning the reefs into subregions (like in Muñiz-castil
 
 Another thing to note, I did not crop reefs originally with these shapefiles so I have a few on the western coast of Panama (for example) that technically do not fall within the Caribbean proper. Thoughts on if I should redo all the SST extractions (**Figures 2-5**) clipping reef locations with these shapefiles?
 
-```{r ecoregion map, message=FALSE, warning=FALSE}
+```{r Caribbean ecoregion shapefile modification, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 
 ### The global marine ecoregion shapefile was read in and cropped based on the Caribbean region
-#region <- shapefile(ecoregion_shape_path)
-#regions_cropped <- crop(region, extent(-100, -55, 8, 30)) # crop for the Caribbean region only
-#shapefile(regions_cropped, "data/EcoRegions/Caribbean_ecoregions.shp", overwrite = TRUE) # save the new Caribbean-specific ecoregions shapefile
+region <- shapefile(ecoregion_shape_path)
+regions_cropped <- crop(region, extent(-100, -55, 8, 33)) # crop for the Caribbean region only
+shapefile(regions_cropped, "data/EcoRegions/Caribbean_ecoregions.shp", overwrite = TRUE) # save the new Caribbean-specific ecoregions shapefile
 
-## Read in the clipped Caribbean ecoregion shapefile
-ecoreg <- read_sf("data/EcoRegions/Caribbean_ecoregions.shp")
+```
 
-## Subset the shapefile further for the TNA province and remove Bermuda and SGoM ecoregions
+```{r assign reefs to ecoregions, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+## Read in the reef points csv and clipped Caribbean ecoregion shapefile
+reef_gps <- read.csv("data/ReefData/CaribbeanReef_points.csv") # read in FULL reef locations csv
+ecoreg <- read_sf("data/EcoRegions/Caribbean_ecoregions.shp") # this is used for ecoregion name list (plotting ecoregion bounds)
+ecoregions2 <- readOGR('data/EcoRegions', 'Caribbean_ecoregions') # this is used for assigning ecoregion in the forloop
+
+
+## Subset shapefile for the TNA province (code 12) with Bermuda removed and only the N. GoM within the WTNA province (codes 6)
 carib_ecoreg <- ecoreg %>% 
-  filter(PROVINCE =="Tropical Northwestern Atlantic" & ECOREGION != "Bermuda" & ECOREGION != "Southern Gulf of Mexico") 
+  filter(PROV_CODE == 12 & ECOREGION != "Bermuda" | PROV_CODE == 6 & ECOREGION == "Northern Gulf of Mexico") 
 
-## Plot the ecoregions on the Caribbean map
-ecoreg_map <- ggplot(carib_ecoreg) + 
-  geom_sf(colour = "black", aes(fill = ECOREGION), alpha = 0.5) +
-  scale_fill_brewer("Ecoregion", palette = "Set2") +
+# create unique reef id
+reef_points <- reef_gps %>%
+  mutate(reef_id = as.numeric(interaction(lat, lon, drop=TRUE))) %>%
+  filter()
+
+# transform points into SpatialPointsDataFrames and modify projection to be the same
+coordinates(reef_points) <- c("lon", "lat")  
+projection(reef_points) <- proj #
+projection(ecoregions2) <- proj
+
+
+## Assign reef locations to ecoregions (using forloop)
+
+# create a list of the ecoregions (used in the forloop)
+eco_list <- carib_ecoreg$ECOREGION
+# make a blank dataframe to be populated from the forloop
+compiled_eco_df <- data.frame('lat' = integer(),
+                              'lon' = integer(),
+                              'reef_id' = factor(),
+                              'ecoregion' = factor())
+
+# Create a forloop to assign reef loactions to each ecoregion and compile into single dataframe
+for(e in 1:length(eco_list)) {
+  ecoregion_name <- eco_list[[e]] # pull the name of ecoregion
+  subset_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == ecoregion_name, ] # subset for only the desired ecoregion
+  projection(subset_ecoreg) <- proj # modify the lat/lon projection to match reef points
+  ecoregion_reefs <- reef_points[subset_ecoreg, ] # clip the reef points by the ecoregion bounds
+  ecoregion_df <- as.data.frame(ecoregion_reefs) # transform reef points (spatial) to dataframe
+  ecoregion_df$reef_id <- factor(ecoregion_df$reef_id) # make reef ID into a factor
+  ecoregion_df$ecoregion <- rep(ecoregion_name, length(ecoregion_df$reef_id)) # add ecoregion name to the data
+  compiled_eco_df <- rbind(compiled_eco_df, ecoregion_df) # add the most recent layer to the full dataframe
+}
+
+
+# Rename "Northern GoM" and "Northern GoM" to just GoM (these will be considered the same ecoregion from here on)
+compiled_eco_df$ecoregion <- gsub("Northern G", "G", compiled_eco_df$ecoregion)
+compiled_eco_df$ecoregion <- gsub("Southern G", "G", compiled_eco_df$ecoregion)
+
+```
+
+```{r reefs by ecoregion map}
+
+### Plot the map (reefs are coloured by ecoregion with # of reefs beside region name)
+
+## Update ecoregion labels to include number of reefs within each 
+# create dataframe of just ecoregion and n
+lab_df <- compiled_eco_df %>% 
+  group_by(ecoregion) %>% 
+  summarize(n = n())
+
+# create new labels to display 'ECOREGION (n=NUMBER_REEFS)'
+labels <- paste(lab_df$ecoregion, " (n=", lab_df$n, ")", sep = "")
+
+# Name existing ecoregion labels based on new labels for plot 
+eco_labs <- c("Bahamian" = labels[1], "Eastern Caribbean" = labels[2], "Floridian" = labels[3], "Southwestern Caribbean" = labels[7], "Western Caribbean" = labels[8], "Southern Caribbean" = labels[6], "Gulf of Mexico" = labels[5], "Greater Antilles" = labels[4])
+
+
+## set colour palette and read in world shapefile
+world <- ne_countries(scale = "medium", returnclass = "sf") # world shapefile
+pal <- c("#FF948C", "#E48732", "#387560", "#7993CF", "#6E4096", "#5898AF", "#D9B03B", "#B8321D") # colour palette for ecoregions
+pal2 <- c("#FF948C", "#E48732", "#387560", "#7993CF", "#6E4096", "#5898AF", "#6E4096", "#D9B03B", "#B8321D") # ecoregion bounds colours
+
+
+## Map plot
+# Note: to display the ecoregion bounds, unhash the two lines to plot the shapefiles over the map
+
+ggplot() + 
+  geom_point(data = compiled_eco_df, aes(x = lon, y = lat, colour = ecoregion), size = 0.7) +
+  geom_sf(data = world) +
+  #geom_sf(data = carib_ecoreg, colour = "black", aes(fill = ECOREGION), alpha = 0.1) + # for showing ecoregion bounds
+  #scale_fill_manual("Ecoregion", values = pal2, labels = eco_labs) + # for showing ecoregion bounds (colours)
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
-  geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  #geom_point(data = reef_pt, aes( x = X, y = Y), colour = "black", size = 0.1) +
-  coord_sf(xlim = c(-95,-55), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude")
-
-```
-
-
-```{r subsetting reefs by ecoregion, message=FALSE, warning=FALSE}
-
-### Subset reefs by ecoregions for analyses by region
-
-# reef shape files containing reef polygons
-ecoregions2 <- readOGR('data/EcoRegions', 'Caribbean_ecoregions') 
-
-# Select the only the desired ecoregion:
-Bahamian_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Bahamian", ]
-ECarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Eastern Caribbean", ]
-FL_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Floridian", ]
-Antilles_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Greater Antilles", ]
-SCarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Southern Caribbean", ]
-SWCarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Southwestern Caribbean", ]
-WCarib_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == "Western Caribbean", ]
-
-
-# Clip the reefs by the selected ecoregion bounds:
-Bahamian_reefs <- shapes[Bahamian_ecoreg,]
-ECarib_reefs <- shapes[ECarib_ecoreg,]
-FL_reefs <- shapes[FL_ecoreg,]
-Antilles_reefs <- shapes[Antilles_ecoreg,]
-SCarib_reefs <- shapes[SCarib_ecoreg,]
-SWCarib_reefs <- shapes[SWCarib_ecoreg,]
-WCarib_reefs <- shapes[WCarib_ecoreg,]
-
-```
-
-```{r ecoregion reef plot}
-
-# PLot the reefs as points, coloured by region
-eco_reef_map <- ggplot() +
-    #geom_rect(aes(xmin=-Inf,xmax=Inf,ymin=-Inf, ymax=41.5), fill="#666666") +
-    coord_sf(xlim = c(-95,-55), ylim = c(8,33)) +
-    ylab("Latitude") +
-    xlab("Longitude") +
-    theme_bw() +
-    theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
-    geom_point(data = Bahamian_reefs, aes(x=long, y = lat, group = group), fill = "#1B9E77", color='#1B9E77', size = 0.2) +
-    geom_point(data = ECarib_reefs, aes(x=long, y = lat, group = group), fill = "#D95F02", color='#D95F02', size = 0.2) +
-    geom_point(data = FL_reefs, aes(x=long, y = lat, group = group), fill = "#7570B3", color='#7570B3', size = 0.2) +
-    geom_point(data = Antilles_reefs, aes(x=long, y = lat, group = group), fill = "#E7298A", color='#E7298A', size = 0.2) +
-    geom_point(data = SCarib_reefs, aes(x=long, y = lat, group = group), fill = "#66A61E", color='#66A61E', size = 0.2) +
-    geom_point(data = SWCarib_reefs, aes(x=long, y = lat, group = group), fill = "#E6AB02", color='#E6AB02', size = 0.2) +
-    geom_point(data = WCarib_reefs, aes(x=long, y = lat, group = group), fill = "#A6761D", color='#A6761D', size = 0.2) +
-    geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1)
-
-
-# Plot actual shape polygons, coloured by region
-#ggplot() +
-#    geom_rect(aes(xmin=-Inf,xmax=Inf,ymin=-Inf, ymax=41.5), fill="#666666") +
-#    geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "lightgrey", color='lightgrey', lwd = 0.1) +
-#    coord_sf(xlim = c(-90,-57), ylim = c(8,28)) +
-#    ylab("Latitude") +
-#    xlab("Longitude") +
-#    theme_bw() +
-#    geom_polygon(data = Bahamian_reefs, aes(x=long, y = lat, group = group), fill = "#1B9E77", color='#1B9E77', lwd = 0.1) +
-#    geom_polygon(data = ECarib_reefs, aes(x=long, y = lat, group = group), fill = "#D95F02", color='#D95F02', lwd = 0.1) +
-#    geom_polygon(data = FL_reefs, aes(x=long, y = lat, group = group), fill = "#7570B3", color='#7570B3', lwd = 0.1) +
-#    geom_polygon(data = Antilles_reefs, aes(x=long, y = lat, group = group), fill = "#E7298A", color='#E7298A', lwd = 0.1) +
-#    geom_polygon(data = SCarib_reefs, aes(x=long, y = lat, group = group), fill = "#66A61E", color='#66A61E', lwd = 0.1) +
-#    geom_polygon(data = SWCarib_reefs, aes(x=long, y = lat, group = group), fill = "#E6AB02", color='#E6AB02', lwd = 0.1) +
-#    geom_polygon(data = WCarib_reefs, aes(x=long, y = lat, group = group), fill = "#A6761D", color='#A6761D', lwd = 0.1) 
-
-```
-
-```{r combined ecoregion map}
-
-plot_grid(ecoreg_map, eco_reef_map, ncol = 1, labels = c("A", "B")) +
-  ggsave("figures/Fig14_Ecoregions_map.pdf", width = 6, height = 5)
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33)) +
+  scale_colour_manual("Ecoregion", values = pal, labels = eco_labs) +
+  ylab("") +
+  xlab("") +
+  ggsave("figures/Manuscript_figs/Fig2_ReefMap_map.pdf", width = 8, height = 3.5)
 
 ```
 
@@ -1883,179 +1885,44 @@ plot_grid(ecoreg_map, eco_reef_map, ncol = 1, labels = c("A", "B")) +
 **Figure 14 |** Caribbean ecoregions (**A**) as established by Spalding *et al* 2007 included in this analysis and the associate reef locations (**B**). All marine ecoregion shapefiles and accompanying manuscript can be accessed [here](https://www.worldwildlife.org/publications/marine-ecoregions-of-the-world-a-bioregionalization-of-coastal-and-shelf-areas). Based on reef selection at the start of the analysis, both the Bermuda and Southern Gulf of Mexico regions have been excluded from the analysis and reefs along the western coast of Central America have been excluded with these shapes.  
 
 
-```{r ecoregion SST extraction - REMOTE, eval=FALSE, include=FALSE}
+```{r ecoregion SST extraction, eval=FALSE, include=FALSE}
 
-# ***NOTE***
-####--- this portion of the script was run on a high performance computing cluster because of the long runtime needed
-####--- see separate R script (Ecoregion_SSTExtraction.R) for instructions (located in the code folder)
-####--- the script can be put on a cluster with the HadISST netCDF, Caribbean reef shapefile, and ecoregion shapefile to run
-
-
-##########################################
-# If working with a smaller data set, you can run the below code to accomplish the same outcome as the Ecoregion_SSTExtraction.R script.
-# The code below has been adapted to specifically work with the HadISST_sst.nc, Caribbean_ecoregions.shp, and Caribbean_reefs.shp files:
-
-## Identify the ecoregion you want to extraact reef SST for (you can run 'ecoregions2@data[["ECOREGION"]]' to list ecoregion names)
-region <- "Bahamian" # specify the name of the data set here
-
-
-### Subset reefs by ecoregions for analyses by region
-ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == region, ] # Select the only the desired ecoregion
-ecoreg_reefs <- shapes[ecoreg,] # Clip the reefs by the selected ecoregion bounds
-
-
-## Load the netCDF as rasterBrick
-raster_brick <- brick(HadISST_sst_path)
+#### SST extraction on reefs by ecoregion: this takes a while to run - can try to run remote
 
 ## Create an empty dataframe to populate while running the forloop with the following parameters:
-reg_df <- data.frame('date' = integer(),
-                     'mean' = integer(),
-                     'min' = integer(),
-                     'max' = integer(),
-                     'weighted' = integer(),
-                     'difference' = integer(),
-                     'polygon' = integer(),
+eco_sst_df <- data.frame('date' = integer(),
+                     'sst' = integer(),
                      'ecoregion' = factor())
 
 
-## for loop that runs through each raster layer and extracts the SST corresponding to reef polygons
-for (i in 1:3) { #raster_brick@file@nbands
-  raster <- raster_brick[[i]]
-  
-  mean_sst_vals <- raster::extract(raster, ecoreg_reefs, fun=mean) # calculates a mean SST within each reef polygon
-  min_sst_vals <- raster::extract(raster, ecoreg_reefs, fun=min) # minimum SST within each reef polygon
-  max_sst_vals <- raster::extract(raster, ecoreg_reefs, fun=max) # maximum SST within each reef polygon
-  weighted_mean <- raster::extract(raster, ecoreg_reefs, weights=TRUE, fun=mean) # calculates the weighted mean SST within each reef polygon
-  
-  df <- data.frame('date' = raster@data@names,
-                   'mean' = mean_sst_vals,
-                   'min' = min_sst_vals,
-                   'max' = max_sst_vals,
-                   'weighted' = weighted_mean,
-                   'difference' = mean_sst_vals - weighted_mean)
+## Create a forloop for extracting SST at reef points within each ecoregion
 
-  df$polygon <- rownames(df) # names the row with polygon ID (numeric IDs)
-  df$ecoregion <- rep(region, length(df$date)) # add a column to identify the ecoregion
+for(e in 1:length(eco_list)) {
+  
+  ## First, select reefs within specific ecoregion 
+  ecoregion_name <- eco_list[[e]] # pull the name of ecoregion
+  subset_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == ecoregion_name, ] # subset for only the desired ecoregion
+  projection(subset_ecoreg) <- proj # modify the lat/lon projection to match reef points
+  ecoregion_reefs <- reef_points[subset_ecoreg, ] # clip the reef points by the ecoregion bounds
+  
+  for(i in 1:raster_brick@file@nbands) {
+    
+    ## Then, extract SST from reef locations wihtin the current ecoregion and append to dataframe
+    raster <- raster_brick[[i]] # select the layer of the rasterbrick 
+    sst_vals <- raster::extract(raster, ecoregion_reefs) # extract SST at lat/lon of each reef
+    # create dataframe of current layer (date) and extracted SST
+    df <- data.frame('date' = raster@data@names,
+                     'sst' = sst_vals)
+    df$ecoregion <- rep(ecoregion_name, length(df$date)) # add a ecoregion name column
+    eco_sst_df <- rbind(eco_sst_df, df) # adds current layer SST data to the full dataframe
 
-  reg_df <- rbind(reg_df, df) # adds the above information for each polygon onto the dataframe containing the other calculated values
+  }
 }
-
 
 ## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
 # *** Only uncomment these lines if you want to write over existing files ***
-#save(reg_df, file = paste("data/HadISST/Ecoregion_SST/", region, "_reefs.Rdata", sep = ""))
-#write.csv(reg_df, file = paste("data/HadISST/Ecoregion_SST/", region, "_reefs.csv", sep = ""), row.names=FALSE)
-
-```
-
-```{r ecoregion SST GPS extraction, eval=FALSE, include=FALSE}
-
-## Read in the individual ecoregion extracted SST data
-BA_sst <- read.csv("data/HadISST/Ecoregion_SST/Bahamian_reefs.csv") # no NA values for polygons so it is ready!
-EC_sst <- read.csv("data/HadISST/Ecoregion_SST/ECarib_reefs.csv") # no NA values for polygons so it is ready!
-FL_sst <- read.csv("data/HadISST/Ecoregion_SST/FL_reefs.csv") # has some NA values so those need GPS extraction
-SW_sst <- read.csv("data/HadISST/Ecoregion_SST/SWCarib_reefs.csv") # has some NA values so those need GPS extraction
-WC_sst <- read.csv("data/HadISST/Ecoregion_SST/WCarib_reefs.csv") # has some NA values so those need GPS extraction
-SC_sst <- read.csv("data/HadISST/Ecoregion_SST/SCarib_reefs.csv") # has some NA values so those need GPS extraction
-AN_sst <- read.csv("data/HadISST/Ecoregion_SST/Antilles_reefs.csv") # has some NA values so those need GPS extraction
-
-
-### This portion of code needs to be run for the forllowing ecoregions that were missing SST values for some polygons:
-## "Floridian" "Greater Antilles" "Southern Caribbean" "Southwestern Caribbean" "Western Caribbean"
-
-## Select the ecoregion to extract SST by GPS coordinates
-region_name <- "Greater Antilles" # input desired ecoregion here
-region <- AN_sst
-region_reef <- Antilles_reefs
-
-## selected ecoregion dataframe modification
-region_poly <- region[,c(1,8,7,5)] # select only the polygon ID, ecoregion, weighted mean SST, and time 
-region_poly$polygon <- factor(region_poly$polygon)
-region_poly <- spread(region_poly, polygon, weighted) # convert from long to wide format
-
-
-## create dataframe of missing polygon GPS corrdinates to extract from HadISST raster
-NAcol <- colnames(region_poly)[colSums(is.na(region_poly)) > 0] # identify the columns with NA values to pull SST from GPS points instead of polygons
-
-## Convert ecoregion reefs spatial object to simple feature and extract GSP coordinates of polygons
-region_reef_sf <- st_as_sf(region_reef)
-region_reef_pt <- st_coordinates(region_reef_sf) # extracts all the polygon coordinates into a matrix
-region_reef_pt <- as.data.frame(region_reef_pt) # convert from matrix to dataframe
-region_reef_gps <- region_reef_pt %>% filter(L3 == NAcol) # select only GPS points of polygons missing SST data above
-
-## converting sampling points to spatial points and applying projection to points
-LongLat <- cbind(region_reef_gps$X, region_reef_gps$Y) 
-eco_ReefPTS <- SpatialPoints(LongLat)
-proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
-projection(eco_ReefPTS) <- proj
-
-
-#some pixels fall on land. Finding nearest valid pixels
-#pixels coordinates
-eco_brick <- brick(HadISST_sst_path)
-first_day <- eco_brick[[1]]
-pixel_coordinates <- coordinates(first_day)
-#delete coordinates where data is missing (NA)
-#first, extract data for all pixels
-data <- raster::extract(first_day, pixel_coordinates)
-#now check which ones are NA and delete those entries from the "pixel.coordinates" list
-pixel_coordinates <- pixel_coordinates[!is.na(data),]
-
-
-#create new sampling points, shifted to the center of the pixel they fall on, or to the near pixel in case that one is NA
-eco_ReefPTS_shifted <- vector()
-#loop cycling through sampling points
-for (p in 1:length(eco_ReefPTS)) {
-  #geodesic distances
-  distances <- rdist.earth(coordinates(eco_ReefPTS[p]),pixel_coordinates,miles=FALSE)
-  #coordinates of the pixel that is at shorter distance 
-  shifted_coordinates <- pixel_coordinates[which.min(distances),]
-  #assigning those coordinates to a new item
-  cmd <- paste0("sp.",p,"<-shifted_coordinates")
-  eval(parse(text=cmd))
-  #points(pt[1],pt[2])
-  cmd <- paste0("eco_ReefPTS_shifted<-rbind(eco_ReefPTS_shifted,sp.",p,")")
-  eval(parse(text = cmd))
-}
-
-
-
-# extract data from the sst brick with the sampling points shifted
-eco_sst <- raster::extract(eco_brick, eco_ReefPTS_shifted)
-
-
-# load in the time data again for HadISST and modify to selected range
-load("data/HadISST/HadISST_times.Rdata")
-Tstart_index <- min(which(difftime(nc_times,start_date)>0))
-Tend_index <- min(which(difftime(nc_times,"2020-04-16")>0))
-time <- nc_times[Tstart_index:Tend_index]
-
-# convert the data matrix to a xts object
-eco_sst_xts <- xts(t(eco_sst), time) #t is used to transpose the matrix because xts assumes dates are along the lines, not columns
-colnames(eco_sst_xts) <- region_reef_gps$L3 #ID the columns
-
-eco_sst_df <- data.frame(date=index(t(eco_sst_xts)), coredata(t(eco_sst_xts)))
-eco_sst_df$polygon <- factor(region_reef_gps$L3) #ID the columns
-eco_sst_df$date <- NULL
-
-eco_sst_long <- gather(eco_sst_df, date, sst, X1870.01.16.15.00.00:X2020.04.16.15.00.00)
-
-
-eco_gps <- aggregate(eco_sst_long, by = list(eco_sst_long$date, eco_sst_long$polygon), FUN = mean)[,c(1:2,5)]
-eco_gps2 <- eco_gps %>% separate(Group.1, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
-eco_gps2$date <- paste(eco_gps2$year, eco_gps2$month, eco_gps2$day, sep = ".")
-
-eco_gps2 <- eco_gps2[, c(7,9,8)]
-eco_gps2 <- spread(eco_gps2, Group.2, sst)
-
-
-region_poly <- select(region_poly, -c(NAcol)) # remove the NA columns before adding them back in below
-
-eco_full <- region_poly %>% 
-  left_join(eco_gps2, by = c("date" = "date"))
-
-
-write.csv(eco_full, file = paste("data/HadISST/Ecoregion_SST/", gsub(" ", "", region_name, fixed = TRUE), "_reefs_gps.csv", sep = ""), row.names=FALSE)
+#save(eco_sst_df, file = "data/HadISST/Ecoregion_SST/HadISST_ecoregion_sst.Rdata")
+#write.csv(eco_sst_df, file = "data/HadISST/Ecoregion_SST//HadISST_ecoregion_sst", row.names=FALSE)
 
 ```
 
@@ -2063,93 +1930,43 @@ write.csv(eco_full, file = paste("data/HadISST/Ecoregion_SST/", gsub(" ", "", re
 
 ```{r ecoregion monthly SST dataframe construction}
 
-## Read in the individual ecoregion extracted SST data (these are the full df when GPS extraction needed to happen)
-BA_sst <- read.csv("data/HadISST/Ecoregion_SST/Bahamian_reefs.csv")
-EC_sst <- read.csv("data/HadISST/Ecoregion_SST/ECarib_reefs.csv")
-FL_sst <- read.csv("data/HadISST/Ecoregion_SST/Floridian_reefs_gps.csv") 
-SW_sst <- read.csv("data/HadISST/Ecoregion_SST/SouthwesternCaribbean_reefs_gps.csv")
-WC_sst <- read.csv("data/HadISST/Ecoregion_SST/WesternCaribbean_reefs_gps.csv")
-SC_sst <- read.csv("data/HadISST/Ecoregion_SST/SouthernCaribbean_reefs_gps.csv")
-AN_sst <- read.csv("data/HadISST/Ecoregion_SST/GreaterAntilles_reefs_gps.csv")
+## Load the ecoregion extracted SST data (here using Rdata, but you can use csv if smaller)
+load("data/HadISST/Ecoregion_SST/HadISST_ecoregion_sst.Rdata")
+
+# Rename "Northern GoM" and "Northern GoM" to just GoM (these will be considered the same ecoregion from here on)
+eco_sst_df$ecoregion <- gsub("Northern G", "G", eco_sst_df$ecoregion)
+eco_sst_df$ecoregion <- gsub("Southern G", "G", eco_sst_df$ecoregion)
+
+ecoregion_sst <- eco_sst_df %>% 
+  group_by(ecoregion, date) %>% 
+  summarize(mean_sst = mean(sst, na.rm = TRUE),
+            max = max(sst, na.rm = TRUE),
+            min = min(sst, na.rm = TRUE),
+            n = n())
 
 
-## Adjust BA and EC from long to wide to match others
-BA_sst <- BA_sst[,c(1,8,7,5)] # select only the polygon ID, ecoregion, weighted mean SST, and time 
-EC_sst <- EC_sst[,c(1,8,7,5)]
-
-
-FL_sst <- gather(FL_sst, polygon, weighted, X14:X27)
-SW_sst <- gather(SW_sst, polygon, weighted, X1:X55)
-WC_sst <- gather(WC_sst, polygon, weighted, X1:X73)
-SC_sst <- gather(SC_sst, polygon, weighted, X1:X169)
-AN_sst <- gather(AN_sst, polygon, weighted, X1:X184)
-
-## Combine all ecoregion SST dataframes into one and modify for plotting
-ecoregion_sst <- rbind(BA_sst, EC_sst, FL_sst, SW_sst, WC_sst, SC_sst, AN_sst)
-ecoregion_sst$polygon <- as.factor(gsub("\\X", "", ecoregion_sst$polygon)) # convert the year column to numerics and remove 'X'
-#ecoregion_sst$polygon2 <- paste(ecoregion_sst$polygon, ecoregion_sst$ecoregion, sep = "_")
-#ecoregion_sst$polygon <- NULL
-ecoregion_sst2 <- spread(ecoregion_sst, polygon, weighted) # convert from long to wide format
-
-
-
-## create a new dataframe of simple stats per time
-eco_sst_full <- data.frame("date" = ecoregion_sst2[,1],
-                           "ecoregion" = ecoregion_sst2[,2],
-                           "mean_temp" = rowMeans(ecoregion_sst2[,-c(1:2)], na.rm = TRUE),
-                           "max_temp" = apply(ecoregion_sst2[,-c(1:2)], 1, FUN=max, na.rm = TRUE),
-                           "min_temp" = apply(ecoregion_sst2[,-c(1:2)], 1, FUN=min, na.rm = TRUE))
-
-eco_sst_full <- eco_sst_full %>% separate(date, c("year", "month", "day"), convert = TRUE) # create year, month, and day column columns
-eco_sst_full$year <- as.numeric(gsub("\\X", "", eco_sst_full$year)) # convert the year column to numerics and remove 'X'
-eco_sst_full$month2 <- factor(eco_sst_full$month) # make a month as a factor column for plotting
+ecoregion_sst <- ecoregion_sst %>% separate(date, c("year", "month", "day"), convert = TRUE) # create year, month, and day column columns
+ecoregion_sst$year <- as.numeric(gsub("\\X", "", ecoregion_sst$year)) # convert the year column to numerics and remove 'X'
+ecoregion_sst$month2 <- factor(ecoregion_sst$month) # make a month as a factor column for plotting  
+ecoregion_sst <- subset(ecoregion_sst, year != "2020")
 
 ```
 
 ```{r ecoregion monthly SST per year, fig.align='center', fig.height=10, fig.width=9}
 
-
-# calculate summary statistic per month across years
-eco_month_avg <- eco_sst_full %>% 
-  group_by(ecoregion, month) %>% 
-  summarize(mean = mean(mean_temp, na.rm = TRUE),
-            sd = sd(mean_temp, na.rm = TRUE),
-            n = n()) %>% 
-  mutate(se = sd / sqrt(n),
-         lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
-         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
-
-
-# Create overall mean SST per ecoregion for plotting
-eco_month_avg_mean <- eco_sst_full %>% 
-  group_by(ecoregion) %>% 
-  summarize(max = round(max(mean_temp, na.rm = TRUE), 2),
-            min = round(min(mean_temp, na.rm = TRUE), 2))
-
-
-# Add '(mean SST: XX)' to each ecoregion label
-labs <- paste(levels(eco_month_avg_mean$ecoregion), " (max = ", eco_month_avg_mean$max, "; min = ", eco_month_avg_mean$min, "°C)", sep = "")
-
-# Name existing facet labels based on new labels for plot 
-facet_labs <- c("Bahamian" = labs[1], "Eastern Caribbean" = labs[2], "Floridian" = labs[3], "Southwestern Caribbean" = labs[4], "Western Caribbean" = labs[5], "Southern Caribbean" = labs[6], "Greater Antilles" = labs[7])
-
-
 #### Data visualization of monthly SST per year #### 
-
-# make year integer for better plotting
-eco_sst_full$year <- as.integer(eco_sst_full$year)
 
 ## create plots of monthly HadISST per year
 # markdown plot
 ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 70, hjust = 1)) +
-  geom_line(data = eco_sst_full, aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.2) +
-  scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(eco_sst_full$year), space="Lab") +
+  geom_line(data = ecoregion_sst, aes(x = month, y = mean_sst, group = year, colour = year), alpha = 0.6, size = 0.2) +
+  scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(ecoregion_sst$year), space="Lab") +
   scale_x_continuous(name = "", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
-  scale_y_continuous(breaks = seq(22, 32, 1)) +
+  scale_y_continuous(breaks = seq(20, 32, 2)) +
   ylab('SST (°C)') +
-  facet_wrap(~ecoregion, ncol = 2, labeller = labeller(ecoregion = facet_labs)) +
+  facet_wrap(~ecoregion, ncol = 2) +
   guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
   ggsave("figures/Fig15_Ecoregion_SST_monthly.pdf", width = 7, height = 8)
 
@@ -2162,37 +1979,26 @@ ggplot() +
 
 ```{r ecoregion annual SST, fig.height=9, fig.width=9}
 
-# Subset out 2020 data 
-eco_sst_full <- subset(eco_sst_full, year != "2020")
-
-
-# Calculate summary statistic per month across years
-ecoregion_year_avg <- eco_sst_full %>% 
+## Calculate summary statistic per month across years
+ecoregion_sst_annual <- ecoregion_sst %>% 
   group_by(ecoregion, year) %>% 
-  summarize(mean = mean(mean_temp, na.rm = TRUE),
-            max = max(mean_temp, na.rm = TRUE),
-            min = min(mean_temp, na.rm = TRUE),
+  summarize(mean = mean(mean_sst, na.rm = TRUE),
+            max = max(mean_sst, na.rm = TRUE),
+            min = min(mean_sst, na.rm = TRUE),
             range = max - min,
-            sd = sd(mean_temp, na.rm = TRUE),
+            sd = sd(mean_sst, na.rm = TRUE),
             n = n()) %>% 
   mutate(se = sd / sqrt(n),
          lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
          upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
 
-# Create overall mean SST per ecoregion for plotting
-ecoregion_year_mean <- eco_sst_full %>% 
+## Create overall mean SST per ecoregion for plotting dashed line
+ecoregion_year_mean <- ecoregion_sst %>% 
   group_by(ecoregion) %>% 
-  summarize(mean = round(mean(mean_temp, na.rm = TRUE), 2),
-            range = round(mean((max(mean_temp, na.rm = TRUE) - min(mean_temp, na.rm = TRUE)), na.rm = TRUE), 2))
+  summarize(mean = round(mean(mean_sst, na.rm = TRUE), 2),
+            range = round(mean((max(mean_sst, na.rm = TRUE) - min(mean_sst, na.rm = TRUE)), na.rm = TRUE), 2))
 
-
-
-# Add '(mean SST: XX)' to each ecoregion label
-labels <- paste(levels(ecoregion_year_mean$ecoregion), " (mean: ", ecoregion_year_mean$mean, "; range: ", ecoregion_year_mean$range, "°C)", sep = "")
-
-# Name existing facet labels based on new labels for plot 
-facet_labels <- c("Bahamian" = labels[1], "Eastern Caribbean" = labels[2], "Floridian" = labels[3], "Southwestern Caribbean" = labels[4], "Western Caribbean" = labels[5], "Southern Caribbean" = labels[6], "Greater Antilles" = labels[7])
-
+ecoregion_year_mean$lab <- paste(LETTERS[1:8])
 
 #### Data visualization per year across months #### 
 
@@ -2200,126 +2006,22 @@ facet_labels <- c("Bahamian" = labels[1], "Eastern Caribbean" = labels[2], "Flor
 ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 30, hjust = 0.8)) +
-  #geom_point(data = ecoregion_year_mean, aes(x = 2019, y = mean), colour = "white") +  
-  geom_segment(data = ecoregion_year_avg, aes(y = mean(mean), yend = mean(mean), x = 1870, xend = 2019), colour = "grey", linetype = 2) +
-  #geom_label_repel(data = ecoregion_year_mean, aes(x = 2019, y = mean, label = mean), nudge_y = -5.6, nudge_x = 3, label.size = NA, size = 2.7, segment.size = 0.3) +
-  geom_ribbon(data = ecoregion_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
-  #geom_line(data = ecoregion_year_avg, aes(x = year, y = mean), colour = "black", group = 1, size = 1.2) +
+  geom_segment(data = ecoregion_year_mean, aes(y = mean, yend = mean, x = 1870, xend = 2019), colour = "grey", linetype = 2) +
+  geom_ribbon(data = ecoregion_sst_annual, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
   scale_x_continuous(name = "", breaks = seq(1880, 2019, 20)) +
   ylab('SST (°C)') +
-  geom_line(data = ecoregion_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
-  geom_line(data = ecoregion_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
-  geom_smooth(data = ecoregion_year_avg, method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 0.5, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp
+  geom_line(data = ecoregion_sst_annual, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
+  geom_line(data = ecoregion_sst_annual, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
+  geom_smooth(data = ecoregion_sst_annual, method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 0.5, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp
   coord_cartesian(xlim = c(1870, 2019)) +
-  scale_y_continuous(breaks = seq(22, 32, 2)) +
-  facet_wrap(~ ecoregion, ncol = 2, labeller = labeller(ecoregion = facet_labels)) +
-  ggsave("figures/Fig16_Ecoregion_SST_annual.pdf", width = 7, height = 8)
+  scale_y_continuous(breaks = seq(20, 32, 2), limits = c(20, 32)) +
+  facet_wrap(~ ecoregion, ncol = 2) +
+  geom_text(data = ecoregion_year_mean, aes(x = -Inf, y = Inf, label = lab, group = ecoregion), fontface = "bold", size = 4.5, hjust = -0.5, vjust = 1.4) +
+  ggsave("figures/Manuscript_figs/Fig4_Ecoregion_SST_trends.pdf", width = 7, height = 8)
 
 ```
 
 **Figure 16 |** Annual mean SST (HadISST) recorded on reefs within each ecoregion (black line - *as calculated using the geom_smooth function fit with a general addative model*) and 95% confidence interval (grey ribbon). The <span style="color: #2166ac;">blue</span> line represents the annual minimum SST across sites within a specific ecoregion and the <span style="color: #d6604d;">red</span> line depicts the maximum SST across sites within an ecoregion per year. The grey horizontal dotted line represented the overall mean SST across all reefs within the Caribbean.
-
-
-
-
-
-
-
-THIS IS THE WORKING CHUNK HERE:
-
-```{r}
-
-reef_gps <- read.csv("data/ReefData/CaribbeanReef_points.csv") # read in FULL reef locations csv
-
-## Read in the clipped Caribbean ecoregion shapefile
-ecoreg <- read_sf("data/EcoRegions/Caribbean_ecoregions.shp")
-ecoregions2 <- readOGR('data/EcoRegions', 'Caribbean_ecoregions') 
-
-## Subset the shapefile further for the TNA province and remove Bermuda and SGoM ecoregions
-carib_ecoreg <- ecoreg %>% 
-  filter(PROVINCE =="Tropical Northwestern Atlantic" & ECOREGION != "Bermuda") 
-
-## Plot the ecoregions on the Caribbean map
-#ggplot(carib_ecoreg) + 
-#  geom_sf(colour = "black", aes(fill = ECOREGION), alpha = 0.5) +
-#  scale_fill_brewer("Ecoregion", palette = "Set2") +
-#  theme_bw() +
-#  geom_point(data = reef_gps, aes(x = lon, y = lat), colour = "blue", size = 0.5) +
-#  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), #strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
-#  geom_polygon(data = land, aes(x=long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) #+
-#  #geom_point(data = reef_pt, aes( x = X, y = Y), colour = "black", size = 0.1) +
-#  coord_sf(xlim = c(-95,-55), ylim = c(8,33)) +
-#  ylab("Latitude") +
-#  xlab("Longitude")
-#
-
-
-
-
-
-
-#1 Create unique reef id:
-reef_points <- reef_gps %>%
-  mutate(reef_id = as.numeric(interaction(lat, lon, drop=TRUE))) %>%
-  filter()
-
-#2 promote the input lists to SpatialPointsDataFrames
-coordinates(reef_points) <- c("lon", "lat")  
-projection(reef_points) <- proj
-projection(ecoregions2) <- proj
-
-
-
-eco_list <- carib_ecoreg$ECOREGION # make a list of 
-compiled_eco_df <- data.frame('lat' = integer(),
-                              'lon' = integer(),
-                              'reef_id' = factor(),
-                              'ecoregion' = factor(),
-                              'n' = integer())
-
-for(e in 1:length(eco_list)) {
-  ecoregion_name <- eco_list[[2]]
-  subset_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == ecoregion_name, ]
-  projection(subset_ecoreg) <- proj
-  ecoregion_reefs <- reef_points[subset_ecoreg, ]
-  
-  ecoregion_df <- as.data.frame(ecoregion_reefs)
-  ecoregion_df$reef_id <- factor(ecoregion_df$reef_id)
-  ecoregion_df$ecoregion <- rep(ecoregion_name, length(ecoregion_df$reef_id)) 
-  ecoregion_df$n <- length(ecoregion_df$reef_id)
-  
-  compiled_eco_df <- rbind(compiled_eco_df, ecoregion_df) 
-}
-
-
-
-
-#### Things I am testing from Laura's code:
-
-# land shapefile
-library(rnaturalearth)
-#install.packages("rnaturalearthdata")
-world <- ne_countries(scale = "medium", returnclass = "sf")
-
-ggplot() + 
-  geom_point(data = compiled_eco_df, aes(x = lon, y = lat, colour = ecoregion), size = 0.5) +
-  geom_sf(data = world) +
-  theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
-  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33)) +
-  scale_fill_brewer("Ecoregion", palette = "Set2") +
-  ylab("Latitude") +
-  xlab("Longitude")
-
-
-```
-
-
-
-
-
-
-
 
 
 
