@@ -2237,6 +2237,29 @@ cowplot::plot_grid(path_pval_map, map_p, align = "hv") +
 
 ```
 
+```{r remove really high/low slopes from Path map}
+
+test <- path_slope_clipped %>% 
+  filter(sst > -0.8 & sst < 0.8)
+
+
+path_map <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  geom_raster(data = test, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = FALSE) + 
+  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(-0.3, 0.)) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  theme(panel.background = element_rect(fill = "grey95")) +
+  labs(x = "", y = "") +
+  #geom_point(aes(-89.47917, 29.31250), colour = "purple") +# playing with some point data
+  ggtitle(paste0("SST slope from 1981 to 2019 (Pathfinder)"))
+
+ggplotly(path_map)
+
+```
+
 
 
 <br/><br/>
