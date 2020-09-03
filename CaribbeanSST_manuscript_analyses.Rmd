@@ -59,6 +59,7 @@ library(repmis)
 ## set the current date
 date <- Sys.Date() 
 
+
 ## spatial subsetting for Caribbean region
 Xmin<- -100
 Xmax<- -55
@@ -69,9 +70,26 @@ Ymax<- 40
 ## set the projection
 proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
 
+
 ## set the binning of p-values for plotting
 bins <- c(-Inf, 0.0001, 0.001, 0.01, 0.05, 0.1, Inf)
 bin_names <- c("< 0.0001", "0.0001 - 0.001", "0.001 - 0.01", "0.01 - 0.05", "0.05 - 0.1", "> 0.1")
+
+
+## Create base map for SST maps
+map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
+  dplyr::rename(lon = long)
+
+
+## Make a shapefile of lat/lon bounds of MHW map
+# make dataframe of lat/lon
+bound_df <- data.frame("lon" = c(262.125, 285.125, 285.125, 302.125, 302.125, 285.125, 285.125, 276.125, 276.125, 271.125, 269.625, 262.125,262.125),
+                       "lat" = c(31, 31, 25.125, 25.125, 9.125, 9.125, 7.375, 7.375, 15.875, 15.875, 17.875, 17.875, 31))
+bound_df$lon <- bound_df$lon - 360 # convert lon back into -180 to 180
+bound_matrix <- data.matrix(bound_df) # Transform from dataframe to a matrix
+bound_poly <- Polygon(bound_matrix) # transform matrix to polygon
+bound_SP <- SpatialPolygons(list(Polygons(list(bound_poly), ID = "a")), proj4string=CRS(proj)) # convert polygon to SpatialPolygon object
+bound_SP_df <- as(bound_SP, "SpatialPolygonsDataFrame") # convert to SpatialPolygonsDataFrame
 
 ```
 
@@ -106,7 +124,7 @@ pathfinder_combined_monthly_data_path <- "/Users/colleen/Dropbox/Git/Data_Not_On
 
 ## Pathfinder_monthly_edit.nc: 
 # Dropbox link: https://www.dropbox.com/s/mvh9atmfuqhdq3k/Pathfinder_monthly_edit.nc?dl=0
-Pathfinder_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/PathfinderSST_monthly_edit.nc"
+Pathfinder_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/PathfinderSST_UPDATE_monthly_edit.nc"
 
 ```
 
@@ -744,8 +762,9 @@ colnames(path_slope) <- c("sst", "x", "y")
 ### This does take a while (~10 minutes), however it can be run locally.
 
 ## load in the edited pathfinder raster
-path_brick <- brick(Pathfinder_monthly_edit_path)
-
+#path_brick <- brick(Pathfinder_monthly_edit_path)
+path_brick <- brick("/Users/colleen/Dropbox/Git/CaribbeanSST/data/Pathfinder/PathfinderSST_UPDATE_monthly_edit2.nc")
+plot(path_brick)
 ## function to pull the p value per pixel of the simple lm applied to the full Pathfinder raster brick 
 pval.fun2 <- function(x, time)
 {
@@ -762,7 +781,7 @@ colnames(path_pavl) <- c("pval", "x", "y")
 path_pavl$bins <- cut(path_pavl$pval, breaks = bins, labels = bin_names) # bins the pvales into 6 unique bins for plotting
 
 ## save the dataframe to save time
-write.csv(path_pavl, file = "data/Pathfinder/Pathfinder_pval.csv", row.names=FALSE)
+write.csv(path_pavl, file = "data/Pathfinder/Pathfinder_pval2.csv", row.names=FALSE)
 
 # --------- *Plotting occurs down at the bottom of the markdown file* --------- #
 
@@ -1202,7 +1221,7 @@ plot_grid(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
 
 ```{r path SST map, message=FALSE, warning=FALSE}
 
-load("data/Pathfinder/Pathfinder_slope.Rdata") # load Rdata of the modified Pathfinder raster
+load("data/Pathfinder/Pathfinder_slope_UPDATE2.Rdata") # load Rdata of the modified Pathfinder raster
 #path_slope <- read.csv("/Users/colleen/Dropbox/Coauthor\ Publication/Precht_Review/data/Pathfinder/path_slope3.csv", header = TRUE) # or load csv
 
 path_map <- ggplot() +  
@@ -1212,7 +1231,7 @@ path_map <- ggplot() +
   scale_fill_distiller("ºC per decade", palette = "YlOrRd", trans = "reverse", limits = c(max(had_slope_sub$sst), min(had_slope_sub$sst))) +
   geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
   guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   ylab("Latitude") +
   xlab("Longitude") +
   ggtitle(paste0("SST slope from ", format.Date(start_date2, "%Y"), " to ", format.Date(end_date2, "%Y")," (Pathfinder)"))
@@ -1952,6 +1971,99 @@ ecoregion_sst <- subset(ecoregion_sst, year != "2020")
 
 ```
 
+```{r playing with some SST numbers}
+
+### Calculate simple stats of HadISST for full dataset (mean, min, max, range)
+
+## Wider Caribbean
+# based off mean values per region per date
+Had_table <- ecoregion_sst %>% 
+  group_by(1) %>% 
+  summarise(mean = round(mean(mean_sst), 2),
+            min = round(min(mean_sst), 2),
+            max = round(max(mean_sst), 2),
+            range = round((max - min), 2),
+            n = n())
+
+# based off all data
+Had_table2 <- eco_sst_df %>% 
+  group_by(1) %>% 
+  summarise(mean = round(mean(sst, na.rm = TRUE), 2),
+            min = round(min(sst, na.rm = TRUE), 2),
+            max = round(max(sst, na.rm = TRUE), 2),
+            range = round((max - min), 2))
+
+
+## By ecoregion
+# based off mean values per region per date
+Had_eco_table <- ecoregion_sst %>% 
+  group_by(ecoregion) %>% 
+  summarise(mean = round(mean(mean_sst), 2),
+            min = round(min(mean_sst), 2),
+            max = round(max(mean_sst), 2),
+            range = round((max - min), 2))
+
+# based off all data
+Had_eco_table2 <- eco_sst_df %>% 
+  group_by(ecoregion) %>% 
+  summarise(mean = round(mean(sst, na.rm = TRUE), 2),
+            min = round(min(sst, na.rm = TRUE), 2),
+            max = round(max(sst, na.rm = TRUE), 2),
+            range = round((max - min), 2))
+
+
+
+### Calculate simple stats of HadISST for full dataset (mean, min, max, range)
+
+## Wider Caribbean
+# based off mean values per region per date
+Had_table_sub <- ecoregion_sst %>% 
+  filter(year %in% (1983:2019)) %>% 
+  group_by(1) %>% 
+  summarise(mean = round(mean(mean_sst), 2),
+            min = round(min(mean_sst), 2),
+            max = round(max(mean_sst), 2),
+            range = round((max - min), 2),
+            n = n())
+
+## By ecoregion
+# based off mean values per region per date
+Had_eco_table_sub <- ecoregion_sst %>% 
+  filter(year %in% (1983:2019)) %>% 
+  group_by(ecoregion) %>% 
+  summarise(mean = round(mean(mean_sst), 2),
+            min = round(min(mean_sst), 2),
+            max = round(max(mean_sst), 2),
+            range = round((max - min), 2))
+
+
+
+## Mean SST 1870 - 1879:
+decade_first <- ecoregion_sst %>% 
+  filter(year %in% (1870:1879)) %>% 
+  group_by(year) %>% 
+  summarise(mean = mean(mean_sst),
+            min = min(mean_sst),
+            max = max(mean_sst))
+
+## Mean SST 1983 - 1992:
+decade_mid <- Had_table %>% 
+  filter(year %in% (1983:1992)) %>% 
+  summarise(mean = mean(mean),
+            min = min(min),
+            max = max(max))
+
+
+## Mean SST 2010 - 1019:
+decade_last <- Had_table %>% 
+  filter(year %in% (2010:2019)) %>% 
+  summarise(mean = mean(mean),
+            min = min(min),
+            max = max(max))
+
+```
+
+
 ```{r ecoregion monthly SST per year, fig.align='center', fig.height=10, fig.width=9}
 
 #### Data visualization of monthly SST per year #### 
@@ -2036,10 +2148,6 @@ OISST_nTrend_carib$lon <- OISST_nTrend_carib$lon- 360 # convert lon back into -1
 OISST_nTrend_carib <- OISST_nTrend_carib %>% 
   mutate(pvalb = cut(p, breaks = c(0, 0.001, 0.01, 0.05, .10, .50, 1)))
 
-# create base map
-map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
-  dplyr::rename(lon = long)
-
 
 ## MHW slopes map
 map_slope <- ggplot(OISST_nTrend_carib, aes(x = lon, y = lat)) + 
@@ -2072,19 +2180,8 @@ map_p <- ggplot(OISST_nTrend_carib, aes(x = lon, y = lat)) +
 
 ### Pathfinder SST slope map
 
-## Make a shapefile of lat/lon bounds of MHW map
-# make dataframe of lat/lon
-bound_df <- data.frame("lon" = c(262.125, 285.125, 285.125, 302.125, 302.125, 285.125, 285.125, 276.125, 276.125, 271.125, 269.625, 262.125,262.125),
-                       "lat" = c(30.125, 30.125, 25.125, 25.125, 9.125, 9.125, 7.375, 7.375, 15.875, 15.875, 17.875, 17.875, 30.125))
-bound_df$lon <- bound_df$lon - 360 # convert lon back into -180 to 180
-bound_matrix <- data.matrix(bound_df) # Transform from dataframe to a matrix
-bound_poly <- Polygon(bound_matrix) # transform matrix to polygon
-bound_SP <- SpatialPolygons(list(Polygons(list(bound_poly), ID = "a")), proj4string=CRS(proj)) # convert polygon to SpatialPolygon object
-bound_SP_df <- as(bound_SP, "SpatialPolygonsDataFrame") # convert to SpatialPolygonsDataFrame
-
-
 ## Clip Pathfinder slopes by MHW bounds
-load("/Users/colleen/Dropbox/Git/CaribbeanSST/data/Pathfinder/Pathfinder_slope.Rdata") # load Rdata of the modified Pathfinder raster
+load("/Users/colleen/Dropbox/Git/CaribbeanSST/data/Pathfinder/Pathfinder_slope_UPDATE2.Rdata") # load Rdata of the modified Pathfinder raster
 path_slope <- path_slope[c(2,3,1)] # just reordering the dataframe
 coordinates(path_slope) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
 projection(path_slope) <- proj # modify projection to match Pathfinder
@@ -2106,7 +2203,7 @@ path_map <- ggplot() +
 
 
 ## Clip Pathfinder pvalues by MHW bounds
-path_pavl <- read.csv("/Users/colleen/Dropbox/Git/CaribbeanSST/data/Pathfinder/Pathfinder_pval.csv", header = TRUE) # read in the saved .csv of the dataframe
+path_pavl <- read.csv("/Users/colleen/Dropbox/Git/CaribbeanSST/data/Pathfinder/Pathfinder_pval2.csv", header = TRUE) # read in the saved .csv of the dataframe
 path_pavl <- path_pavl[c(2,3,1, 4)] # just reordering the dataframe
 coordinates(path_pavl) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
 projection(path_pavl) <- proj # modify projection to match Pathfinder
@@ -2122,6 +2219,7 @@ path_pval_map <- ggplot() +
   #scale_fill_brewer("p-value", palette = "PuBu", direction = 1) +
   geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  theme(panel.background = element_rect(fill = "grey95")) +
   labs(x = "", y = "") +
   ggtitle("SST slope significance from 1981 to 2019 (Pathfinder)")
 
@@ -2136,8 +2234,6 @@ cowplot::plot_grid(path_map, map_slope, labels = c("A", "B"), label_size = 18) +
 ## Combined Figure 5 p values:
 cowplot::plot_grid(path_pval_map, map_p, align = "hv") +
   ggsave("/Users/colleen/Dropbox/SST_Caribbean_Manuscript/Working Sections/Figures/SST_MHW_significance_map.pdf", width = 14.5, height = 5)
-
-
 
 ```
 
