@@ -321,7 +321,7 @@ had_pval_sub$bins <- cut(had_pval_sub$pval, breaks = bins, labels = bin_names) #
 
 ```
 
-```{r HadISST SST polygon extraction - REMOTE, eval=FALSE, include=FALSE, paged.print=FALSE}
+```{r NOT RUN - HadISST SST polygon extraction - REMOTE, eval=FALSE, include=FALSE, paged.print=FALSE}
 
 # ***NOTE***
 ####--- this portion of the script was run on a high performance computing cluster because of the long runtime needed
@@ -375,7 +375,7 @@ for (i in 1:had_brick@file@nbands) {
 
 ```
 
-```{r had GPS extraction, eval=FALSE, include=FALSE}
+```{r NOT RUN - had GPS extraction, eval=FALSE, include=FALSE}
 
 ## this is the data frame of extracted SST based on polygons
 load("data/HadISST/HadISST_reefs_poly.Rdata")
@@ -466,34 +466,34 @@ ReefPTS <- SpatialPoints(LongLat)
 proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
 projection(ReefPTS) <- proj
 
-## shift points (some pixels fall on land so finding nearest valid pixels
-# pixels coordinates
-first_day <- data_brick[[1]]
-pixel_coordinates <- coordinates(first_day)
-
-# delete coordinates where data is missing (NA)
-data <- raster::extract(first_day, pixel_coordinates) # extract data for all pixels
-pixel_coordinates <- pixel_coordinates[!is.na(data),] # remove NA from the "pixel.coordinates" list
-
-# Create new sampling points, shifted to the center of the pixel they fall on, or to the near pixel in case that one is NA
-ReefPTS_shifted <- vector()
-#loop cycling through sampling points
-for (p in 1:length(ReefPTS)) {
-  #geodesic distances
-  distances <- rdist.earth(coordinates(ReefPTS[p]),pixel_coordinates,miles=FALSE)
-  #coordinates of the pixel that is at shorter distance 
-  shifted_coordinates <- pixel_coordinates[which.min(distances),]
-  #assigning those coordinates to a new item
-  cmd <- paste0("sp.",p,"<-shifted_coordinates")
-  eval(parse(text=cmd))
-  #points(pt[1],pt[2])
-  cmd <- paste0("ReefPTS_shifted<-rbind(ReefPTS_shifted,sp.",p,")")
-  eval(parse(text = cmd))
-}
-
+#  ## shift points (some pixels fall on land so finding nearest valid pixels
+#  # pixels coordinates
+#  first_day <- data_brick[[1]]
+#  pixel_coordinates <- coordinates(first_day)
+#  
+#  # delete coordinates where data is missing (NA)
+#  data <- raster::extract(first_day, pixel_coordinates) # extract data for all pixels
+#  pixel_coordinates <- pixel_coordinates[!is.na(data),] # remove NA from the "pixel.coordinates" list
+#  
+#  # Create new sampling points, shifted to the center of the pixel they fall on, or to the near pixel in case that one is NA
+#  ReefPTS_shifted <- vector()
+#  #loop cycling through sampling points
+#  for (p in 1:length(ReefPTS)) {
+#    #geodesic distances
+#    distances <- rdist.earth(coordinates(ReefPTS[p]),pixel_coordinates,miles=FALSE)
+#    #coordinates of the pixel that is at shorter distance 
+#    shifted_coordinates <- pixel_coordinates[which.min(distances),]
+#    #assigning those coordinates to a new item
+#    cmd <- paste0("sp.",p,"<-shifted_coordinates")
+#    eval(parse(text=cmd))
+#    #points(pt[1],pt[2])
+#    cmd <- paste0("ReefPTS_shifted<-rbind(ReefPTS_shifted,sp.",p,")")
+#    eval(parse(text = cmd))
+#  }
+#  
 
 ## extract data from the sst brick with the sampling points shifted
-had_sst <- raster::extract(data_brick, ReefPTS_shifted)
+had_sst <- raster::extract(data_brick, ReefPTS)   # had_sst <- raster::extract(data_brick, ReefPTS_shifted)
 
 
 
@@ -512,7 +512,7 @@ had_gps <- spread(had_gps, reef, sst)
 
 ## save the final dataframe (.csv or Rdata)
 #write.csv(had_gps, file = "data/HadISST/HadISST_reefs_SST_update.csv") # to save file as .csv
-save(had_gps, file = "data/HadISST/HadISST_reefs_SST_update.Rdata") # to save file as Rdata (I saved as Rdata since it is large)
+save(had_gps, file = "data/HadISST/HadISST_reefs_SST_update2.Rdata") # to save file as Rdata (I saved as Rdata since it is large)
 
 ```
 
@@ -521,7 +521,7 @@ save(had_gps, file = "data/HadISST/HadISST_reefs_SST_update.Rdata") # to save fi
 
 ```{r had monthly SST dataframe construction}
 
-load("data/HadISST/HadISST_reefs_SST_update.Rdata")
+load("data/HadISST/HadISST_reefs_SST_update2.Rdata")
 
 had_full <- had_gps # only need to use this to make the UPDATED reef SST dataframe compatible below
 
@@ -567,6 +567,7 @@ hadplot_markdown <- ggplot() +
   #geom_ribbon(data = HADI_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
   #geom_line(data = HADI_month_avg, aes(x = month, y = mean), colour = "black", group = 1, size = 1.5) +
   scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
   ylab('SST (°C)') +
   ggtitle("HadISST (1870 - 2019)") +
   ggsave("figures/Fig2_HadISST_SST_monthly.pdf", width = 6, height = 3.5)
@@ -584,6 +585,18 @@ had_plot_gif <- ggplot() +
   #geom_line(data = HADI_month_avg, aes(x = month, y = mean), colour = "black", group = 1, size = 1.5) +
   scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
   ylab('SST (°C)')
+
+
+#### Summary information for 'Results' text:
+
+## Monthly SST min/max/mean
+had_mean<- had_full2 %>% 
+  group_by(month) %>% 
+  summarise("mean" = mean(mean_temp, na.rm = TRUE))
+
+min(had_mean$mean)
+max(had_mean$mean)
+mean(had_mean$mean)
 
 ```
 
@@ -613,6 +626,7 @@ anim_save("figures/HadISST.gif")
 sst_gam_df <- gather(had_full, reef, sst, `1`:`5607`)
 sst_gam_df$date <- gsub("\\X", "", sst_gam_df$date) # convert year to numeric and remove 'X'
 sst_gam_df <- sst_gam_df %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
+sst_gam_df <- subset(sst_gam_df, year != "2020")
 
 
 #### Data visualization per year across months #### 
@@ -627,7 +641,8 @@ HADI_year_avg <- had_full2 %>%
             n = n()) %>% 
   mutate(se = sd / sqrt(n),
          lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
-         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
+         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se,
+         range = max - min)
 
 
 ## plot with smoothed trend
@@ -647,6 +662,8 @@ HadISST_SST_plot <- ggplot() +
   #ggtitle("HadISST (1870 - 2019)") +
   coord_cartesian(xlim = c(1870, 2019)) +
   ggsave("figures/Fig3_HadISST_SST_annual.pdf", width = 6, height = 4)
+
+ggplotly(HadISST_SST_plot)
 
 ```
 
@@ -1945,6 +1962,7 @@ for(e in 1:length(eco_list)) {
 
 ```
 
+
 <br/>
 
 ```{r ecoregion monthly SST dataframe construction}
@@ -1975,43 +1993,38 @@ ecoregion_sst <- subset(ecoregion_sst, year != "2020")
 
 ### Calculate simple stats of HadISST for full dataset (mean, min, max, range)
 
-## Wider Caribbean
-# based off mean values per region per date
+# SST of all data of whole region
+Had_table2 <- eco_sst_df %>% 
+ # group_by(1) %>% 
+  summarise(mean = round(mean(sst, na.rm = TRUE), 2),
+            min = round(min(sst, na.rm = TRUE), 2),
+            max = round(max(sst, na.rm = TRUE), 2),
+            range = round((max - min), 2),
+            n = n())
+
+
+# SST of all data by region
+Had_eco_table2 <- eco_sst_df %>% 
+  group_by(ecoregion) %>% 
+  summarise(mean = round(mean(sst, na.rm = TRUE), 2),
+            min = round(min(sst, na.rm = TRUE), 2),
+            max = round(max(sst, na.rm = TRUE), 2),
+            range = round((max - min), 2),
+            n = n())
+
+# SST of mean data by region
 Had_table <- ecoregion_sst %>% 
-  group_by(1) %>% 
+  #group_by(1) %>%   
   summarise(mean = round(mean(mean_sst), 2),
             min = round(min(mean_sst), 2),
             max = round(max(mean_sst), 2),
             range = round((max - min), 2),
             n = n())
 
-# based off all data
-Had_table2 <- eco_sst_df %>% 
-  group_by(1) %>% 
-  summarise(mean = round(mean(sst, na.rm = TRUE), 2),
-            min = round(min(sst, na.rm = TRUE), 2),
-            max = round(max(sst, na.rm = TRUE), 2),
-            range = round((max - min), 2))
 
 
-## By ecoregion
-# based off mean values per region per date
-Had_eco_table <- ecoregion_sst %>% 
-  group_by(ecoregion) %>% 
-  summarise(mean = round(mean(mean_sst), 2),
-            min = round(min(mean_sst), 2),
-            max = round(max(mean_sst), 2),
-            range = round((max - min), 2))
 
-# based off all data
-Had_eco_table2 <- eco_sst_df %>% 
-  group_by(ecoregion) %>% 
-  summarise(mean = round(mean(sst, na.rm = TRUE), 2),
-            min = round(min(sst, na.rm = TRUE), 2),
-            max = round(max(sst, na.rm = TRUE), 2),
-            range = round((max - min), 2))
-
-
+sum(Had_eco_table2$n)
 
 ### Calculate simple stats of HadISST for full dataset (mean, min, max, range)
 
