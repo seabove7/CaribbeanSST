@@ -2140,7 +2140,7 @@ ggplot() +
   geom_smooth(data = ecoregion_sst_annual, method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 0.5, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp
   coord_cartesian(xlim = c(1870, 2019)) +
   scale_y_continuous(breaks = seq(20, 32, 2), limits = c(20, 32)) +
-  facet_wrap(~ ecoregion, ncol = 2) +
+  facet_wrap(~ ecoregion, ncol = 2, scales = "free_y") +
   geom_text(data = ecoregion_year_mean, aes(x = -Inf, y = Inf, label = lab, group = ecoregion), fontface = "bold", size = 4.5, hjust = -0.5, vjust = 1.4) +
   ggsave("figures/Manuscript_figs/Fig4_Ecoregion_SST_trends.pdf", width = 7, height = 8)
 
@@ -2250,17 +2250,17 @@ cowplot::plot_grid(path_pval_map, map_p, align = "hv") +
 
 ```
 
-```{r remove really high/low slopes from Path map}
+```{r remove really high/low slopes from Path map, eval=FALSE, include=FALSE}
 
 test <- path_slope_clipped %>% 
-  filter(sst > -0.8 & sst < 0.8)
+  filter(sst > -0.29 & sst < 0.41)
 
 
-path_map <- ggplot() +  
+ggplot() +  
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
   geom_raster(data = test, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = FALSE) + 
-  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(-0.3, 0.)) +
+  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(-0.3, 0.4)) +
   geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
   guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
@@ -2269,7 +2269,6 @@ path_map <- ggplot() +
   #geom_point(aes(-89.47917, 29.31250), colour = "purple") +# playing with some point data
   ggtitle(paste0("SST slope from 1981 to 2019 (Pathfinder)"))
 
-ggplotly(path_map)
 
 ```
 
