@@ -2130,7 +2130,7 @@ ecoregion_year_mean$lab <- paste(LETTERS[1:8])
 ## Plot with smoothed trend
 ggplot() +
   theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 30, hjust = 0.8)) +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 30, hjust = 0.8), text = element_text(size = 14)) +
   geom_segment(data = ecoregion_year_mean, aes(y = mean, yend = mean, x = 1870, xend = 2019), colour = "grey", linetype = 2) +
   geom_ribbon(data = ecoregion_sst_annual, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
   scale_x_continuous(name = "", breaks = seq(1880, 2019, 20)) +
@@ -2165,7 +2165,7 @@ OISST_nTrend_carib <- OISST_nTrend_carib %>%
 ## MHW slopes map
 map_slope <- ggplot(OISST_nTrend_carib, aes(x = lon, y = lat)) + 
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
   #geom_rect(size = 0.2, fill = NA, aes(xmin = lon - 0.1, xmax = lon + 0.1, ymin = lat - 0.1, ymax = lat + 0.1, colour = pval)) +
   geom_raster(aes(fill = slope), interpolate = FALSE, alpha = 0.9) +
   scale_fill_distiller("MHW per year", palette = "RdYlBu", limits = c((min(OISST_nTrend_carib$slope)-0.04), max(OISST_nTrend_carib$slope))) +
@@ -2175,20 +2175,20 @@ map_slope <- ggplot(OISST_nTrend_carib, aes(x = lon, y = lat)) +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   labs(x = "", y = "") +
   guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
-  ggtitle("MHW slope from 1981 to 2017")
+  ggtitle("Change in marine heat wave frequency (1981-2017)")
 
 
 ## MHW significance map
 map_p <- ggplot(OISST_nTrend_carib, aes(x = lon, y = lat)) + 
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
   geom_raster(aes(fill = pvalb), interpolate = FALSE) +
   scale_fill_brewer("p-value", palette = "PuBu", direction = -1, breaks = c("(0,0.001]", "(0.001,0.01]", "(0.01,0.05]", "(0.05,0.1]", "(0.1,0.5]", "(0.5,1]")) +
   geom_polygon(data = map_base, aes(group = group), colour = "#575757", fill = "grey81") +
   theme(panel.background = element_rect(fill = "grey95")) +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   labs(x = "", y = "") +
-  ggtitle("MHW significance from 1981 to 2017")
+  ggtitle("Significance of change in heat wave frequency (1981-2017)")
 
 
 ### Pathfinder SST slope map
@@ -2204,7 +2204,7 @@ path_slope_clipped <- as.data.frame(path_clipped) # convert to dataframe
 ## Plot Pathfinder slope map
 path_map <- ggplot() +  
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
   geom_raster(data = path_slope_clipped, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = FALSE) + 
   scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(-0.3, 0.4)) +
   geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
@@ -2212,7 +2212,7 @@ path_map <- ggplot() +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   theme(panel.background = element_rect(fill = "grey95")) +
   labs(x = "", y = "") +
-  ggtitle(paste0("SST slope from 1981 to 2019 (Pathfinder)"))
+  ggtitle(paste0("Caribbean warming rate (1981-2019)"))
 
 
 ## Clip Pathfinder pvalues by MHW bounds
@@ -2226,7 +2226,7 @@ pathP_slope_clipped <- as.data.frame(pathP_clipped) # convert to dataframe
 ## Plot Pathfinder significance map
 path_pval_map <- ggplot() +  
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
   geom_raster(data = pathP_slope_clipped, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = FALSE) + 
   scale_fill_manual("p-value", values = "#045a8d") +
   #scale_fill_brewer("p-value", palette = "PuBu", direction = 1) +
@@ -2234,7 +2234,7 @@ path_pval_map <- ggplot() +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   theme(panel.background = element_rect(fill = "grey95")) +
   labs(x = "", y = "") +
-  ggtitle("SST slope significance from 1981 to 2019 (Pathfinder)")
+  ggtitle("Significance of Caribbean warming (1981-2019)")
 
 
 
@@ -2242,11 +2242,11 @@ path_pval_map <- ggplot() +
 
 ## Combined Figure 5:
 cowplot::plot_grid(path_map, map_slope, labels = c("A", "B"), label_size = 18) +
-  ggsave("/Users/colleen/Dropbox/SST_Caribbean_Manuscript/Working Sections/Figures/Fig5_SST_MHW_map.pdf", width = 14.5, height = 5)
+  ggsave("/Users/colleen/Dropbox/Git/CaribbeanSST/figures/Manuscript_figs/Fig5_SST_MHW_map.pdf", width = 14.5, height = 5)
 
 ## Combined Figure 5 p values:
 cowplot::plot_grid(path_pval_map, map_p, align = "hv") +
-  ggsave("/Users/colleen/Dropbox/SST_Caribbean_Manuscript/Working Sections/Figures/SST_MHW_significance_map.pdf", width = 14.5, height = 5)
+  ggsave("/Users/colleen/Dropbox/Git/CaribbeanSST/figures/SST_MHW_significance_map.pdf", width = 14.5, height = 5)
 
 ```
 
