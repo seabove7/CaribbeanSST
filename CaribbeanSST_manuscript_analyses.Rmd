@@ -142,7 +142,7 @@ land <- getRgshhsMap(gshhs.f.b, xlim = c(-105, -40), ylim = c(-10, 40)) %>%
 
 # read in the global coral reef shapefile 
 shape <- shapefile(WCMC008_CoralReef2018_Py_v4_path)
-reefs_cropped <- crop(shape, extent(-88, -55, 8, 30)) # crop for the Caribbean region only
+reefs_cropped <- crop(shape, extent(Xmin, Xmax, Ymin, Ymax)) # crop for the Caribbean region only
 shapefile(reefs_cropped, "data/ReefData/Caribbean_reefs.shp") # save the new Caribbean-specific reef shapefile
 
 ```
@@ -560,11 +560,7 @@ had_full2$year <- as.integer(had_full2$year)
 hadplot_markdown <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1), text = element_text(size = 14)) +
-<<<<<<< HEAD
   theme(legend.position = c(0.065, 0.85), legend.key.size = unit(0.3, "cm"), legend.background = element_rect(fill = NA), plot.title = element_text(size = 12)) + # legend theme
-=======
-  theme(legend.position = c(0.065, 0.85), legend.key.size = unit(0.3, "cm"), legend.background = element_rect(fill = NA)) + # legend theme
->>>>>>> 8b17f72cb263304b3dfd4824b44c741ff507542d
   guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
   geom_line(data = had_full2[-151,], aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
   scale_colour_gradient2("", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(had_full2$year), space="Lab", breaks = seq(1870, 2020, 50)) +
@@ -574,7 +570,7 @@ hadplot_markdown <- ggplot() +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
   ylab('SST (°C)') +
   ggtitle("HadISST (1870 - 2019)") + 
-  theme(plot.title = element_text(size = 13))
+  theme(plot.title = element_text(size = 13)) +
   ggsave("figures/Fig2_HadISST_SST_monthly.pdf", width = 6, height = 3.5)
 
 ggplotly(hadplot_markdown) # this plots an interactive version of the map in the Rmarkdown HTML output
@@ -672,7 +668,7 @@ ggplotly(HadISST_SST_plot)
 
 ```
 
-**Figure 3 |** Annual mean SST (HadISST) across reef sites (black line - as calculated using the geom_smooth function fit with a general addative model) and 95% confidence interval (grey ribbon). The <span style="color: #2166ac;">blue</span> line represents the annual minimum SST across sites and the <span style="color: #d6604d;">red</span> line depicts the maximum SST across sites per year. The grey horizontal dotted line represented the overall mean SST of the full dataset, and the grey verticle line denotes when the subset of data matching the Pathfinder SST begins.
+**Figure 3 |** Annual mean SST (HadISST) across reef sites (black line - as calculated using the geom_smooth function fit with a general additive model) and 95% confidence interval (grey ribbon). The <span style="color: #2166ac;">blue</span> line represents the annual minimum SST across sites and the <span style="color: #d6604d;">red</span> line depicts the maximum SST across sites per year. The grey horizontal dotted line represented the overall mean SST of the full dataset, and the grey vertical line denotes when the subset of data matching the Pathfinder SST begins.
 
 
 ```{r include=FALSE}
