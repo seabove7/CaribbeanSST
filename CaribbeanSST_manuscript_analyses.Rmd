@@ -671,7 +671,7 @@ ggplotly(HadISST_SST_plot)
 **Figure 3 |** Annual mean SST (HadISST) across reef sites (black line - as calculated using the geom_smooth function fit with a general additive model) and 95% confidence interval (grey ribbon). The <span style="color: #2166ac;">blue</span> line represents the annual minimum SST across sites and the <span style="color: #d6604d;">red</span> line depicts the maximum SST across sites per year. The grey horizontal dotted line represented the overall mean SST of the full dataset, and the grey vertical line denotes when the subset of data matching the Pathfinder SST begins.
 
 
-```{r include=FALSE}
+```{r had combined figure, include=FALSE}
 
 # Saves the manuscript version of the HadISST historic SST
 plot_grid(hadplot_markdown, HadISST_SST_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
@@ -725,7 +725,15 @@ Tend_index2 <- min(which(difftime(nc_times,end_date2)>0))
 data_brick2 <- data_brick2[[Tstart_index2:Tend_index2]]
 time <- nc_times[Tstart_index2:Tend_index2]
 
-save(time, nc_times, file = "data/Pathfinder/Pathfinder_times.Rdata")# save the time variables for IDs for running scripts remotely
+## Remove NAs and convert to C
+KtoC <- function(x){round(x-273.15,2)} # converts the raster from Kelvin to Celsius
+NAset <- function(x){x[x < -54]<-NA; return(x)} # Pathfinder uses the value -54 (K) to denote missing data and this function replaces that with NA
+data_brick2 <- calc(data_brick2, KtoC) # apply the Kelvin function written above to raster
+data_brick2 <- calc(data_brick2, NAset) # apply the NA function written above to raster
+
+
+# save time component
+save(time, nc_times, data_brick2, file = "data/Pathfinder/Pathfinder_times.Rdata")# save the time variables for IDs for running scripts remotely
 
 ```
 
@@ -934,7 +942,7 @@ path_sst_df$date <- NULL
 
 ```
 
-```{r path}
+```{r path, eval=FALSE, include=FALSE}
 
 load("data/Pathfinder/Pathfinder_reef_poly_gps.Rdata") # load in the SST extracted from GPS coordinates missing from polygon extraction
 
@@ -976,16 +984,81 @@ path_full$date.y <- NULL
 
 ```
 
+
+```{r UPDATED path GPS extraction, eval=FALSE, include=FALSE}
+
+reef_gps <- read.csv("data/ReefData/CaribbeanReef_points.csv") # read in FULL reef locations csv
+
+## convert sampling points to spatial points and applying projection to points
+LongLat <- cbind(reef_gps$lon, reef_gps$lat) 
+ReefPTS <- SpatialPoints(LongLat)
+proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
+projection(ReefPTS) <- proj
+
+#  ## shift points (some pixels fall on land so finding nearest valid pixels
+#  # pixels coordinates
+#  first_day <- data_brick2[[1]]
+#  pixel_coordinates <- coordinates(first_day)
+#  
+#  # delete coordinates where data is missing (NA)
+#  data <- raster::extract(first_day, pixel_coordinates) # extract data for all pixels
+#  pixel_coordinates <- pixel_coordinates[!is.na(data),] # remove NA from the "pixel.coordinates" list
+#  
+#  # Create new sampling points, shifted to the center of the pixel they fall on, or to the near pixel in case that one is NA
+#  ReefPTS_shifted <- vector()
+#  #loop cycling through sampling points
+#  for (p in 1:length(ReefPTS)) {
+#    #geodesic distances
+#    distances <- rdist.earth(coordinates(ReefPTS[p]),pixel_coordinates,miles=FALSE)
+#    #coordinates of the pixel that is at shorter distance 
+#    shifted_coordinates <- pixel_coordinates[which.min(distances),]
+#    #assigning those coordinates to a new item
+#    cmd <- paste0("sp.",p,"<-shifted_coordinates")
+#    eval(parse(text=cmd))
+#    #points(pt[1],pt[2])
+#    cmd <- paste0("ReefPTS_shifted<-rbind(ReefPTS_shifted,sp.",p,")")
+#    eval(parse(text = cmd))
+#  }
+#  
+
+## extract data from the sst brick with the sampling points shifted
+path_sst <- raster::extract(data_brick2, ReefPTS)   # path_sst <- raster::extract(data_brick2, ReefPTS_shifted)
+
+
+## convert the data matrix to a final dataframe
+path_sst_xts <- xts(t(path_sst), time) # t is used to transpose the matrix because xts assumes dates are along the lines, not columns
+path_sst_df <- data.frame(date=index(t(path_sst_xts)), coredata(t(path_sst_xts))) # convert xts object to dataframe
+path_sst_df$reef <- factor(seq(1, length(path_sst_df$date), 1)) # ID the columns to identify unique reefs
+path_sst_df$date <- NULL # remove this column since it is repetitive 
+path_sst_long <- gather(path_sst_df, date, sst, X1981.09.15.17.34.40:X2019.12.16.11.45.55) # convert from wide to long format
+
+## update the dataframe for saving
+path_gps <- path_sst_long %>% separate(date, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
+path_gps$date <- paste(path_gps$year, path_gps$month, path_gps$day, sep = ".") # creates a full date column (XYear.Month.Day)
+path_gps <- path_gps[, -c(2:7)] # remove columns for hour, minute, and seconds (we won't use these)
+path_gps <- spread(path_gps, reef, sst)
+
+## save the final dataframe (.csv or Rdata)
+#write.csv(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update.csv") # to save file as .csv
+save(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update2.Rdata") # to save file as Rdata (I saved as Rdata since it is large)
+
+```
+
+
 <br/>
-
-
+  
 ```{r path monthly SST dataframe construction}
+
+load("data/Pathfinder/Pathfinder_reefs_SST_update2.Rdata")
+
+path_full <- path_gps # only need to use this to make the UPDATED reef SST dataframe compatible below
 
 ## create a new dataframe of simple stats per time
 path_full2 <- data.frame("date" = path_full[,1],
-                      "mean_temp" = rowMeans(path_full[,-1], na.rm = TRUE),
-                      "max_temp" = apply(path_full[,-1], 1, FUN=max, na.rm = TRUE),
-                      "min_temp" = apply(path_full[,-1], 1, FUN=min, na.rm = TRUE))
+                        "mean_temp" = rowMeans(path_full[,-1], na.rm = TRUE),
+                        "max_temp" = apply(path_full[,-1], 1, FUN=max, na.rm = TRUE),
+                        "min_temp" = apply(path_full[,-1], 1, FUN=min, na.rm = TRUE),
+                        "n" = length(path_full[,-1]))
 
 path_full2 <- path_full2 %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
 path_full2$year <- as.numeric(gsub("\\X", "", path_full2$year)) # convert the year column to numerics and remove 'X'
@@ -995,7 +1068,9 @@ path_full2$month2 <- factor(path_full2$month) # make a month as a factor column 
 
 ```{r path monthly SST per year, fig.align='center'}
 
-## calculate summary statistic per month across years (currently, this is not being included in this plot: see the geom_ribbon/geom_line lines in plot)
+#### Data visualization of monthly SST per year #### 
+
+# calculate summary statistic per month across years
 Path_month_avg <- path_full2 %>% 
   group_by(month) %>% 
   summarize(mean = mean(mean_temp, na.rm = TRUE),
@@ -1005,25 +1080,28 @@ Path_month_avg <- path_full2 %>%
          lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
          upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
 
-path_full2$year <- as.integer(path_full2$year) # make year integer for better plotting
-
+# make year integer for better plotting
+path_full2$year <- as.integer(path_full2$year)
 
 ## create plots of monthly Pathfinder per year
 # markdown plot
-hadplot_markdown <- ggplot() +
+pathplot_markdown <- ggplot() +
   theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1), text = element_text(size = 14)) +
+  theme(legend.position = c(0.065, 0.85), legend.key.size = unit(0.3, "cm"), legend.background = element_rect(fill = NA), plot.title = element_text(size = 12)) + # legend theme
   guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
   geom_line(data = path_full2, aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
-  scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(path_full2$year), space="Lab") +
+  scale_colour_gradient2("", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(path_full2$year), space="Lab") +
   #geom_ribbon(data = Path_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
   #geom_line(data = Path_month_avg, aes(x = month, y = mean), colour = "black", group = 1, size = 1.5) +
   scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
   ylab('SST (°C)') +
-  ggtitle("Pathfinder (1981 - 2019)") +
+  ggtitle("Pathfinder (1980 - 2019)") + 
+  theme(plot.title = element_text(size = 13)) +
   ggsave("figures/Fig4_Pathfinder_SST_monthly.pdf", width = 6, height = 3.5)
 
-ggplotly(hadplot_markdown) # this plots an interactive version of the map in the Rmarkdown HTML output
+ggplotly(pathplot_markdown) # this plots an interactive version of the map in the Rmarkdown HTML output
 
 # create version of the plot for creating a GIF of Pathfinder data
 path_plot_gif <- ggplot() +
@@ -1037,7 +1115,21 @@ path_plot_gif <- ggplot() +
   scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
   ylab('SST (°C)')
 
+
+#### Summary information for 'Results' text:
+
+## Monthly SST min/max/mean
+path_mean<- path_full2 %>% 
+  group_by(month) %>% 
+  summarise("mean" = mean(mean_temp, na.rm = TRUE))
+
+min(path_mean$mean)
+max(path_mean$mean)
+mean(path_mean$mean)
+
 ```
+
+
 
 **Figure 4 |** Mean SST across coral reefs sites at each monthly sampling event (Pathfinder dataset) from 1870 to 2019. Year is represented by colour of each line, changing from <span style="color: #2166ac;">blue</span> to <span style="color: #d6604d;">red</span> in more recent years. Maximum SST generally occurs for the region between August and October and the minimum SST occurs between January and March.
 
@@ -1061,7 +1153,17 @@ anim_save("figures/Pathfinder.gif")
   
 ```{r path annual SST}
 
-## calculate summary statistic per month across years
+## construct df for the GAM smoothing of mean SST
+sst_gam_df <- gather(path_full, reef, sst, `1`:`5607`)
+sst_gam_df$date <- gsub("\\X", "", sst_gam_df$date) # convert year to numeric and remove 'X'
+sst_gam_df <- sst_gam_df %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
+sst_gam_df <- subset(sst_gam_df, year != "2020")
+sst_gam_df <- subset(sst_gam_df, year != "1981")
+
+
+#### Data visualization per year across months #### 
+
+# calculate summary statistic per month across years
 Path_year_avg <- path_full2 %>% 
   group_by(year) %>% 
   summarize(mean = mean(mean_temp, na.rm = TRUE),
@@ -1071,30 +1173,41 @@ Path_year_avg <- path_full2 %>%
             n = n()) %>% 
   mutate(se = sd / sqrt(n),
          lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
-         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
+         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se,
+         range = max - min)
 
 
 ## plot with smoothed trend
-ggplot() +
+Pathfinder_SST_plot <- ggplot() +
   theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
-  geom_hline(yintercept = mean(Path_year_avg$mean), colour = "grey", linetype = 2) +
-  geom_ribbon(data = Path_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) +
-  #geom_line(data = Path_year_avg, aes(x = year, y = mean), colour = "black", group = 1, size = 1.2) +
-  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2019)) +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14)) +
+  #geom_vline(xintercept = 1981, colour = "lightgrey") +
+  geom_hline(yintercept = mean(Path_year_avg[-1,]$mean), colour = "grey", linetype = 2) +
+  geom_ribbon(data = Path_year_avg[-1,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
+  #geom_line(data = Path_year_avg[-1,], aes(x = year, y = mean), colour = "black", group = 1, size = 1, alpha = 0.7) + # mean sst
+  scale_x_continuous(name = "Year") +
   ylab('SST (°C)') +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
-  geom_line(data = Path_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
-  geom_line(data = Path_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
-  geom_smooth(data = Path_year_avg, method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE) + # smoothed mean temp
-  ggtitle("Pathfinder (1981 - 2019)") +
-  coord_cartesian(xlim = c(1870, 2019)) +
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) + # max sst
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + # min sst
+  geom_smooth(data = sst_gam_df, method = "gam", aes(x = year, y = sst), colour = "black", group = 1, size = 1, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp over all data
+  #ggtitle("Pathfinder (1870 - 2019)") +
+  coord_cartesian(xlim = c(1981, 2019)) +
   ggsave("figures/Fig5_Pathfinder_SST_annual.pdf", width = 6, height = 4)
+
+ggplotly(Pathfinder_SST_plot)
 
 ```
 
 **Figure 5 |** Smoothed annual mean SST (Pathfinder) across reef sites (black line) and 95% confidence interval (grey ribbon). The <span style="color: #2166ac;">blue</span> line represents the annual minimum SST across sites and the <span style="color: #d6604d;">red</span> line depicts the maximum SST across sites per year.
 
+```{r path combined figure, include=FALSE}
+
+# Saves the manuscript version of the Pathfinder historic SST
+plot_grid(pathplot_markdown, Pathfinder_SST_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
+  ggsave("figures/Supplemental_figs/Pathfinder_SST_trends.pdf", width = 6, height = 7.5)
+
+```
 
 <br/><br/><br/>
 
@@ -1112,24 +1225,24 @@ combo_plot <- ggplot() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
   # add the HadISST dataset
   geom_hline(yintercept = mean(HADI_year_avg[-151,]$mean), colour = "darkgrey", linetype = 2) +
-  geom_ribbon(data = HADI_year_avg[-151,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.1, linetype = 1) + 
-  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5, alpha = 0.5) +
-  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5, alpha = 0.5) + 
-  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = mean), colour = "darkgrey", group = 1, size = 0.5, alpha = 0.5) + 
-  geom_smooth(data = HADI_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "darkgrey", group = 1, size = 1, se = FALSE, alpha = 0.5) +
+  geom_ribbon(data = HADI_year_avg[-151,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.05, linetype = 1) + 
+  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5, alpha = 0.3) +
+  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5, alpha = 0.3) + 
+  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = mean), colour = "darkgrey", group = 1, size = 0.5, alpha = 0.3) + 
+  geom_smooth(data = HADI_year_avg[-151,], method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "darkgrey", group = 1, size = 1, se = FALSE, alpha = 0.3) +
   # add the Pathfinder dataset on top
-  geom_hline(yintercept = mean(Path_year_avg[-151,]$mean), colour = "black", linetype = 2) +
-  geom_ribbon(data = Path_year_avg[-151,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) +
+  geom_hline(yintercept = mean(Path_year_avg[-1,]$mean), colour = "black", linetype = 2) +
+  geom_ribbon(data = Path_year_avg[-1,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) +
   scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2019)) +
   ylab('SST (°C)') +
-  geom_line(data = Path_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
-  geom_line(data = Path_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
-  geom_line(data = Path_year_avg[-151,], aes(x = year, y = mean), colour = "black", group = 1, size = 0.5) + 
-  geom_smooth(data = Path_year_avg[-151,], method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 1, se = FALSE) +
-  ggtitle("Caribbean coral reefs historic SST trends (1981 - 2019)") +
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = mean), colour = "black", group = 1, size = 0.5) + 
+  geom_smooth(data = Path_year_avg[-1,], method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "black", group = 1, size = 1, se = FALSE) +
+  ggtitle("Caribbean coral reefs historic SST trends") +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
-  coord_cartesian(xlim = c(1870, 2019))
-  #ggsave("figures/Combined_SST_annual.pdf", width = 6, height = 4) # I have not saveed this figure outside the Rmarkdown file
+  coord_cartesian(xlim = c(1870, 2019)) +
+  ggsave("figures/Supplemental_figs/Both_SST_trends.pdf", width = 6, height = 4) # I have not saveed this figure outside the Rmarkdown file
 
 ggplotly(combo_plot)
 
@@ -1152,10 +1265,10 @@ had_map <- ggplot() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
   geom_raster(data = had_slope, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_distiller("ºC per decade", palette = "YlOrRd", trans = "reverse", limits = c(max(had_slope_sub$sst), min(had_slope_sub$sst))) +
+  scale_fill_distiller("ºC per decade", palette = "YlOrRd", trans = "reverse", limits = c(max(had_slope$sst), min(had_slope$sst))) +
   geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
   guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   ylab("Latitude") +
   xlab("Longitude") +
   ggtitle(paste0("SST slope from ", format.Date(start_date, "%Y"), " to ", format.Date(end_date, "%Y")," (HadISST)"))
@@ -1170,7 +1283,7 @@ had_pval_map <- ggplot() +
   geom_raster(data = had_pavl, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = TRUE) + 
   scale_fill_brewer("P-value", palette = "GnBu") +
   geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   ylab("Latitude") +
   xlab("Longitude") +
   ggtitle(paste0("SST slope significance"))
@@ -1198,7 +1311,7 @@ had_map_sub <- ggplot() +
   scale_fill_distiller("ºC per decade", palette = "YlOrRd", trans = "reverse", limits = c(max(had_slope_sub$sst), min(had_slope_sub$sst))) +
   geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
   guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   ylab("Latitude") +
   xlab("Longitude") +
   ggtitle(paste0("SST slope from ", format.Date(start_dateb, "%Y"), " to ", format.Date(end_date, "%Y")," (HadISST)"))
@@ -1213,7 +1326,7 @@ had_pval_map_sub <- ggplot() +
   geom_raster(data = had_pval_sub, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = TRUE) + 
   scale_fill_brewer("P-value", palette = "GnBu") +
   geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   ylab("Latitude") +
   xlab("Longitude") +
   ggtitle(paste0("SST slope significance"))
