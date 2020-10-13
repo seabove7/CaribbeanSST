@@ -1265,13 +1265,13 @@ had_map <- ggplot() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
   geom_raster(data = had_slope, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_distiller("ºC per decade", palette = "YlOrRd", trans = "reverse", limits = c(max(had_slope$sst), min(had_slope$sst))) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
+  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(-0.03, 0.09)) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   ylab("Latitude") +
   xlab("Longitude") +
-  ggtitle(paste0("SST slope from ", format.Date(start_date, "%Y"), " to ", format.Date(end_date, "%Y")," (HadISST)"))
+  ggtitle(ggtitle(paste0("Caribbean warming rate (1870-2019)")))
 
 ```
 
