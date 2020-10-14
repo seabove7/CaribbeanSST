@@ -1261,86 +1261,121 @@ A simple linear model was applied to each grid through time using a forloop to c
 
 ```{r had SST map, message=FALSE, warning=FALSE}
 
+## Clip Pathfinder slopes by MHW bounds
+had_slope_b <- had_slope[c(2,3,1)] # just reordering the dataframe
+coordinates(had_slope_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(had_slope_b) <- proj # modify projection to match Pathfinder
+had_clipped <- had_slope_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+had_slope_clipped <- as.data.frame(had_clipped) # convert to dataframe
+
+## Plot the map
 had_map <- ggplot() +  
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_slope, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(-0.03, 0.09)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(data = had_slope_clipped, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = FALSE) + 
+  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(min(had_slope_clipped$sst), max(had_slope_clipped$sst))) +
   geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
   guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle(ggtitle(paste0("Caribbean warming rate (1870-2019)")))
+  labs(x = "", y = "") +
+  theme(panel.background = element_rect(fill = "grey95")) +  
+  ggtitle(paste0("Caribbean warming rate (", format.Date(start_date, "%Y"), "-", format.Date(end_date, "%Y"), ")"))
+
 
 ```
 
 ```{r had SST pval map, message=FALSE, warning=FALSE}
 
+## Clip Pathfinder slopes by MHW bounds
+had_pavl_b <- had_pavl[c(2,3,1, 4)] # just reordering the dataframe
+coordinates(had_pavl_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(had_pavl_b) <- proj # modify projection to match Pathfinder
+had_p_clipped <- had_pavl_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+had_pavl_clipped <- as.data.frame(had_p_clipped) # convert to dataframe
+
+
+## Plot the map
 had_pval_map <- ggplot() +  
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_pavl, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_brewer("P-value", palette = "GnBu") +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(data = had_pavl_clipped, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = FALSE) +
+  scale_fill_manual("p-value", values = "#045a8d") +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle(paste0("SST slope significance"))
+  labs(x = "", y = "") +
+  theme(panel.background = element_rect(fill = "grey95")) +  
+  ggtitle("SST slope significance")
 
 ```
 
 ```{r had SST map combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
 plot_grid(had_map, had_pval_map, labels = c("A", "B")) +
-  ggsave("figures/Fig6_HadISST_map.pdf", width = 14, height = 5)
+  ggsave("figures/Supplemental_figs/HadISST_map.pdf", width = 14, height = 5)
 
 ```
 
 
-**Figure 6 |** Change in SST ($^\circ$C / decade) over the timespand of the HadISST dataset (`r format.Date(start_date, "%Y")` - `r format.Date(end_date, "%Y")`) and the resulting significance of the regression (**B**). The average temperature change for the entire region is `r round(mean(had_slope$sst), 2)` ($\pm$ `r round(sd(had_slope$sst), 3)`). 
+**Figure SXX |** Change in SST ($^\circ$C / decade) over the timespand of the HadISST dataset (`r format.Date(start_date, "%Y")` - `r format.Date(end_date, "%Y")`) and the resulting significance of the regression (**B**). The average temperature change for the entire region is `r round(mean(had_slope_clipped$sst), 2)` ($\pm$ `r round(sd(had_slope_clipped$sst), 3)`). 
 
 <br/>
 
 ```{r had SST map subset (1981-2019), message=FALSE, warning=FALSE}
 
+## Clip Pathfinder slopes by MHW bounds
+had_slope_sub_b <- had_slope_sub[c(2,3,1)] # just reordering the dataframe
+coordinates(had_slope_sub_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(had_slope_sub_b) <- proj # modify projection to match Pathfinder
+had_s_slope_clipped <- had_slope_sub_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+had_slope_sub_clipped <- as.data.frame(had_s_slope_clipped) # convert to dataframe
+
+## Plot the map
 had_map_sub <- ggplot() +  
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_slope_sub, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_distiller("ºC per decade", palette = "YlOrRd", trans = "reverse", limits = c(max(had_slope_sub$sst), min(had_slope_sub$sst))) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(data = had_slope_sub_clipped, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = FALSE) + 
+  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(min(had_slope_sub_clipped$sst), max(had_slope_sub_clipped$sst))) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
-  ylab("Latitude") +
-  xlab("Longitude") +
+  labs(x = "", y = "") +
+  theme(panel.background = element_rect(fill = "grey95")) +  
   ggtitle(paste0("SST slope from ", format.Date(start_dateb, "%Y"), " to ", format.Date(end_date, "%Y")," (HadISST)"))
 
 ```
 
 ```{r had SST pval map subset (1981-2019), message=FALSE, warning=FALSE}
 
+## Clip Pathfinder slopes by MHW bounds
+had_pval_sub_b <- had_pval_sub[c(2,3,1, 4)] # just reordering the dataframe
+coordinates(had_pval_sub_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(had_pval_sub_b) <- proj # modify projection to match Pathfinder
+had_p_sub_clipped <- had_pval_sub_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+had_pval_sub_b_clipped <- as.data.frame(had_p_sub_clipped) # convert to dataframe
+
+
+## Plot the map
 had_pval_map_sub <- ggplot() +  
   theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_pval_sub, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_brewer("P-value", palette = "GnBu") +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(data = had_pval_sub_b_clipped, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = FALSE) +
+  scale_fill_manual("p-value", values = "#045a8d") +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle(paste0("SST slope significance"))
+  labs(x = "", y = "") +
+  theme(panel.background = element_rect(fill = "grey95")) +  
+  ggtitle("SST slope significance")
 
 ```
 
 ```{r had SST map subset combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
 plot_grid(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
-  ggsave("figures/Fig7_HadISST_subset_map.pdf", width = 14, height = 5)
+  ggsave("figures/Supplemental_figs/HadISST_subset_map.pdf", width = 14, height = 5)
 
 ```
 
-**Figure 7 |** Change in SST ($^\circ$C / decade) over the subset timespand of the HadISST dataset (subset: `r format.Date(start_dateb, "%Y")` - `r format.Date(end_date, "%Y")`) (**A**) and the resulting significance of the regression (**B**). The average temperature change for the entire region is `r round(mean(had_slope_sub$sst), 2)` ($\pm$ `r round(sd(had_slope_sub$sst), 3)`). 
+**Figure SXX |** Change in SST ($^\circ$C / decade) over the subset timespand of the HadISST dataset (subset: `r format.Date(start_dateb, "%Y")` - `r format.Date(end_date, "%Y")`) (**A**) and the resulting significance of the regression (**B**). The average temperature change for the entire region is `r round(mean(had_slope_sub_clipped$sst), 2)` ($\pm$ `r round(sd(had_slope_sub_clipped$sst), 3)`). 
 
 <br/><br/>
 
