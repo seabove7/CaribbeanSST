@@ -19,8 +19,8 @@
 # the script can be adapted to any similar netCDF/shapefile combination
 
 data_set <- "Pathfinder" # specify the name of the data set here so it will be named as: 'data_set'_reefs_poly
-netCDF <- "/pine/scr/c/o/colbrynn/SCRATCH/SST_data/Pathfinder/PathfinderSST_monthly_edit.nc" # this is the desired SST netCDF and path
-shape_path <- "/pine/scr/c/o/colbrynn/SCRATCH/SST_data/HADISST/Longleaf_working" # path to shape files
+netCDF <- "/Users/colleen/Dropbox/Git/CaribbeanSST/data/Pathfinder/PathfinderSST_monthly_edit.nc" # this is the desired SST netCDF and path
+shape_path <- "/Users/colleen/Dropbox/Git/CaribbeanSST/data/ReefData" # path to shape files
 shape_name <- "Caribbean_reefs" # how the shapefiles are names (without the extension)
 
 #######################
@@ -47,26 +47,28 @@ extract_df <- data.frame('date' = integer(),
                          'mean' = integer(),
                          'min' = integer(),
                          'max' = integer(),
-                         'weighted' = integer(),
-                         'difference' = integer(),
+                         #'weighted' = integer(),
+                         #'difference' = integer(),
                          'polygon' = integer())
 
 
 ## for loop that runs through each raster layer and extracts the SST corresponding to reef polygons
-for (i in 1:sst_raster@file@nbands) {
+for (i in 1:3) { #sst_raster@file@nbands
+ # i = 1
+
   raster <- sst_raster[[i]]
   
   mean_sst_vals <- raster::extract(raster, shapes, fun=mean) # calculates a mean SST within each reef polygon
   min_sst_vals <- raster::extract(raster, shapes, fun=min) # minimum SST within each reef polygon
   max_sst_vals <- raster::extract(raster, shapes, fun=max) # maximum SST within each reef polygon
-  weighted_mean <- raster::extract(raster, shapes, weights=TRUE, fun=mean) # calculates the weighted mean SST within each reef polygon
+  #weighted_mean <- raster::extract(raster, shapes, weights=TRUE, fun=mean) # calculates the weighted mean SST within each reef polygon
   
   layer_df <- data.frame('date' = raster@data@names,
                          'mean' = mean_sst_vals,
                          'min' = min_sst_vals,
-                         'max' = max_sst_vals,
-                         'weighted' = weighted_mean,
-                         'difference' = mean_sst_vals - weighted_mean)
+                         'max' = max_sst_vals)
+                        #'weighted' = weighted_mean,
+                        #'difference' = mean_sst_vals - weighted_mean
   
   layer_df$polygon <- rownames(layer_df) # names the row with polygon ID (numeric IDs)
   
@@ -74,6 +76,9 @@ for (i in 1:sst_raster@file@nbands) {
 }
 
 
+
 ## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
-save(extract_df, file = paste(data_set,"_reefs_poly.Rdata", sep = "")) # save the dataframe as Rdata object
-write.csv(extract_df, file = paste(data_set,"_reefs_poly.csv", sep = "")) # save the dataframe as .csv
+#writeRaster(extract_df, filename = paste(data_set,"_reefs_poly_test.nc", sep = ""), format="CDF", overwrite=TRUE)
+saveRDS(extract_df, file = paste(data_set,"_reefs_poly_test.Rds", sep = ""))
+save(extract_df, file = paste(data_set,"_reefs_poly_test.Rdata", sep = "")) # save the dataframe as Rdata object
+write.csv(extract_df, file = paste(data_set,"_reefs_poly_test.csv", sep = "")) # save the dataframe as .csv

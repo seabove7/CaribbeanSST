@@ -234,7 +234,7 @@ save(time, nc_times, file = "data/HadISST/HadISST_times.Rdata") # save the time 
 
 
 ### subsetting the HadISST raster for 1981 - 2019 timespand for comparison with Pathfinder
-start_dateb <- "1981-08-16"
+start_dateb <- "1981-08-16" #"1990-01-16" 
 start_dateb <- as.POSIXct(start_dateb, tz="UTC")
 
 Tstart_indexb <- min(which(difftime(nc_times, start_dateb)>0))
@@ -627,9 +627,51 @@ anim_save("figures/HadISST.gif")
 sst_gam_df <- gather(had_full, reef, sst, `1`:`5607`)
 sst_gam_df$date <- gsub("\\X", "", sst_gam_df$date) # convert year to numeric and remove 'X'
 sst_gam_df <- sst_gam_df %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
+sst_gam_df$date <- as.Date(with(sst_gam_df, paste(year, month, day, sep="-")), "%Y-%m-%d")
 sst_gam_df <- subset(sst_gam_df, year != "2020")
 
 
+library(mgcv)
+### modelling withOUT month:
+sst_gam_df3 <- sst_gam_df %>% 
+  group_by(year) %>% 
+  summarize(mean_sst = mean(sst, na.rm = TRUE))
+
+sst_lm2 <- lm(mean_sst ~ year, data = sst_gam_df3)
+summary(sst_lm2)
+lm_pred2 <- data.frame(time = sst_gam_df3$year,
+                       sst = sst_gam_df3$mean_sst,
+                       preds = predict(sst_lm2, newdata = sst_gam_df3))
+
+
+
+
+
+
+## fit a GAM for SST data for all reefs:
+sst_gam2 <- gam(mean_sst ~ s(year), data = sst_gam_df3, method = "REML")
+plot(sst_gam2)
+
+par(mfrow = c(2,2))
+gam.check(sst_gam2)
+
+gam_pred2 <- data.frame(time = sst_gam_df3$year,
+                       sst = sst_gam_df3$mean_sst,
+                       preds = predict(sst_gam2, newdata = sst_gam_df3))
+
+ggplot(gam_pred2, aes(x = time)) +
+  theme_cowplot() +
+  #geom_hline(aes(yintercept = sst_gam[["coefficients"]][["(Intercept)"]]), linetype = "dashed") +
+  geom_point(aes(y = sst), size = 1, alpha = 0.5) + 
+  geom_smooth(data = gam_pred2, method = "gam", aes(x = time, y = sst), colour = "green", se = FALSE, formula = y ~ s(x, bs = "cs")) +
+  #geom_smooth(data = sst_gam_df, method = "lm", aes(x = year, y = sst), colour = "purple", se = FALSE) +  
+  geom_line(data = lm_pred2, aes(x = time, y = preds), colour = "purple") +
+  geom_line(aes(y = preds), colour = "red")
+
+summary(sst_gam2)
+
+head(sst_gam_df)
+head(sst_gam_df3)
 #### Data visualization per year across months #### 
 
 # calculate summary statistic per month across years
@@ -690,7 +732,7 @@ Pathfinder reports SST twice daily (night and day) at 4km resolution via NOAA Na
 
 For ease of analysis, monthly mean SSTs per pixel were calculated from the Pathfinder data and saved as a new netCDF file for all downstream analyses. 
 
-```{r Pathfinder raster}
+```{r Pathfinder raster, eval=FALSE, include=FALSE}
 
 ## read in the Pathfinder raster
 path_data <- pathfinder_combined_monthly_data_path
@@ -733,7 +775,8 @@ data_brick2 <- calc(data_brick2, NAset) # apply the NA function written above to
 
 
 # save time component
-save(time, nc_times, data_brick2, file = "data/Pathfinder/Pathfinder_times.Rdata")# save the time variables for IDs for running scripts remotely
+writeRaster(data_brick2, file = "data/Pathfinder/Pathfinder_monthlySST_corrected.nc")
+save(time, nc_times, file = "data/Pathfinder/Pathfinder_times.Rdata")# save the time variables for IDs for running scripts remotely
 
 ```
 
@@ -987,6 +1030,13 @@ path_full$date.y <- NULL
 
 ```{r UPDATED path GPS extraction, eval=FALSE, include=FALSE}
 
+load("data/Pathfinder/Pathfinder_times.Rdata")
+
+## read in the Pathfinder raster
+path_data <- "data/Pathfinder/PathfinderSST_UPDATE_monthly_edit2.nc"
+data_brick2 <- brick(path_data) # read SST data as rasterbrick
+data_brick2 <- crop(data_brick2,extent(Xmin,Xmax,Ymin,Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
+
 reef_gps <- read.csv("data/ReefData/CaribbeanReef_points.csv") # read in FULL reef locations csv
 
 ## convert sampling points to spatial points and applying projection to points
@@ -1040,7 +1090,7 @@ path_gps <- spread(path_gps, reef, sst)
 
 ## save the final dataframe (.csv or Rdata)
 #write.csv(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update.csv") # to save file as .csv
-save(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update2.Rdata") # to save file as Rdata (I saved as Rdata since it is large)
+saveRDS(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update2.rds") # to save file as Rdata (I saved as Rdata since it is large)
 
 ```
 
@@ -1049,7 +1099,8 @@ save(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update2.Rdata") # to
   
 ```{r path monthly SST dataframe construction}
 
-load("data/Pathfinder/Pathfinder_reefs_SST_update2.Rdata")
+path_full <- readRDS("data/Pathfinder/Pathfinder_reefs_SST_update2.rds")
+#load("data/Pathfinder/Pathfinder_reefs_SST_update2.Rdata")
 
 path_full <- path_gps # only need to use this to make the UPDATED reef SST dataframe compatible below
 
@@ -1261,7 +1312,7 @@ A simple linear model was applied to each grid through time using a forloop to c
 
 ```{r had SST map, message=FALSE, warning=FALSE}
 
-## Clip Pathfinder slopes by MHW bounds
+## Clip HadISST slopes by MHW bounds
 had_slope_b <- had_slope[c(2,3,1)] # just reordering the dataframe
 coordinates(had_slope_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
 projection(had_slope_b) <- proj # modify projection to match Pathfinder
@@ -1322,7 +1373,7 @@ plot_grid(had_map, had_pval_map, labels = c("A", "B")) +
 
 ```{r had SST map subset (1981-2019), message=FALSE, warning=FALSE}
 
-## Clip Pathfinder slopes by MHW bounds
+## Clip HadISST slopes by MHW bounds
 had_slope_sub_b <- had_slope_sub[c(2,3,1)] # just reordering the dataframe
 coordinates(had_slope_sub_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
 projection(had_slope_sub_b) <- proj # modify projection to match Pathfinder
@@ -1976,7 +2027,7 @@ shapefile(regions_cropped, "data/EcoRegions/Caribbean_ecoregions.shp", overwrite
 
 ## Read in the reef points csv and clipped Caribbean ecoregion shapefile
 reef_gps <- read.csv("data/ReefData/CaribbeanReef_points.csv") # read in FULL reef locations csv
-ecoreg <- read_sf("data/EcoRegions/Caribbean_ecoregions.shp") # this is used for ecoregion name list (plotting ecoregion bounds)
+ecoreg <- sf::read_sf("data/EcoRegions/Caribbean_ecoregions.shp") # this is used for ecoregion name list (plotting ecoregion bounds)
 ecoregions2 <- readOGR('data/EcoRegions', 'Caribbean_ecoregions') # this is used for assigning ecoregion in the forloop
 
 
@@ -2070,7 +2121,7 @@ ggplot() +
 **Figure 14 |** Caribbean ecoregions (**A**) as established by Spalding *et al* 2007 included in this analysis and the associate reef locations (**B**). All marine ecoregion shapefiles and accompanying manuscript can be accessed [here](https://www.worldwildlife.org/publications/marine-ecoregions-of-the-world-a-bioregionalization-of-coastal-and-shelf-areas). Based on reef selection at the start of the analysis, both the Bermuda and Southern Gulf of Mexico regions have been excluded from the analysis and reefs along the western coast of Central America have been excluded with these shapes.  
 
 
-```{r ecoregion SST extraction, eval=FALSE, include=FALSE}
+```{r ecoregion SST extraction (HadISST), eval=FALSE, include=FALSE}
 
 #### SST extraction on reefs by ecoregion: this takes a while to run - can try to run remote
 
@@ -2112,9 +2163,52 @@ for(e in 1:length(eco_list)) {
 ```
 
 
+```{r ecoregion SST extraction (Pathfinder), eval=FALSE, include=FALSE}
+
+#### SST extraction on reefs by ecoregion: this takes a while to run - can try to run remote
+raster_brick <- data_brick2
+
+## Create an empty dataframe to populate while running the forloop with the following parameters:
+eco_sst_path_df <- data.frame('date' = integer(),
+                     'sst' = integer(),
+                     'ecoregion' = factor())
+
+
+## Create a forloop for extracting SST at reef points within each ecoregion
+
+for(e in 1:length(eco_list)) {
+ 
+  ## First, select reefs within specific ecoregion 
+  ecoregion_name <- eco_list[[e]] # pull the name of ecoregion
+  subset_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == ecoregion_name, ] # subset for only the desired ecoregion
+  projection(subset_ecoreg) <- proj # modify the lat/lon projection to match reef points
+  ecoregion_reefs <- reef_points[subset_ecoreg, ] # clip the reef points by the ecoregion bounds
+  
+  for(i in 1:raster_brick@file@nbands) {
+    
+    ## Then, extract SST from reef locations wihtin the current ecoregion and append to dataframe
+    raster <- raster_brick[[i]] # select the layer of the rasterbrick 
+    sst_vals <- raster::extract(raster, ecoregion_reefs) # extract SST at lat/lon of each reef
+    # create dataframe of current layer (date) and extracted SST
+    df <- data.frame('date' = raster@data@names,
+                     'sst' = sst_vals)
+    df$ecoregion <- rep(ecoregion_name, length(df$date)) # add a ecoregion name column
+    eco_sst_path_df <- rbind(eco_sst_path_df, df) # adds current layer SST data to the full dataframe
+
+  }
+}
+
+## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
+# *** Only uncomment these lines if you want to write over existing files ***
+#saveRDS(eco_sst_path_df, file = "data/Pathfinder/Ecoregion_SST/Pathfinder_ecoregion_sst.rds")
+#write.csv(eco_sst_path_df, file = "data/Pathfinder/Ecoregion_SST/Pathfinder_ecoregion_sst.csv", row.names=FALSE)
+
+```
+
+
 <br/>
 
-```{r ecoregion monthly SST dataframe construction}
+```{r ecoregion monthly SST dataframe construction HadISST}
 
 ## Load the ecoregion extracted SST data (here using Rdata, but you can use csv if smaller)
 load("data/HadISST/Ecoregion_SST/HadISST_ecoregion_sst.Rdata")
@@ -2135,6 +2229,32 @@ ecoregion_sst <- ecoregion_sst %>% separate(date, c("year", "month", "day"), con
 ecoregion_sst$year <- as.numeric(gsub("\\X", "", ecoregion_sst$year)) # convert the year column to numerics and remove 'X'
 ecoregion_sst$month2 <- factor(ecoregion_sst$month) # make a month as a factor column for plotting  
 ecoregion_sst <- subset(ecoregion_sst, year != "2020")
+
+```
+
+```{r ecoregion monthly SST dataframe construction Pathfinder}
+
+## Load the ecoregion extracted SST data (here using Rdata, but you can use csv if smaller)
+eco_sst_path_df <- readRDS("data/Pathfinder/Ecoregion_SST/Pathfinder_ecoregion_sst.rds")
+
+dates <- data.frame(date = paste("X", rep(1:460, 1), sep = ""),
+                       date2 = time)
+
+# Rename "Northern GoM" and "Northern GoM" to just GoM (these will be considered the same ecoregion from here on)
+eco_sst_path_df$ecoregion <- gsub("Northern G", "G", eco_sst_path_df$ecoregion)
+eco_sst_path_df$ecoregion <- gsub("Southern G", "G", eco_sst_path_df$ecoregion)
+
+eco_sst_path_df <- eco_sst_path_df %>% 
+  group_by(ecoregion, date) %>% 
+  summarize(mean_sst = mean(sst, na.rm = TRUE),
+            max = max(sst, na.rm = TRUE),
+            min = min(sst, na.rm = TRUE),
+            n = n())
+
+eco_sst_path_df <- left_join(eco_sst_path_df, dates, by = c("date" = "date"))
+
+eco_sst_path_df <- eco_sst_path_df %>% separate(date2, c("year", "month", "day"), convert = TRUE) # create year, month, and day column columns
+eco_sst_path_df$month2 <- factor(eco_sst_path_df$month) # make a month as a factor column for plotting  
 
 ```
 
@@ -2417,6 +2537,145 @@ ggplot() +
   labs(x = "", y = "") +
   #geom_point(aes(-89.47917, 29.31250), colour = "purple") +# playing with some point data
   ggtitle(paste0("SST slope from 1981 to 2019 (Pathfinder)"))
+
+
+```
+
+
+
+
+```{r}
+####################### Reefs
+## Coral reefs from 1870-2019 (HadISST; will update this to 2020 once that data are released) — 0.039 per decade
+#had_sst <- sst_gam_df
+had_full_lm <- lm(sst ~ year, data = had_sst)
+had_full_lm
+
+had_full_lm_pred <- data.frame(time = had_sst$year,
+                       sst = had_sst$sst,
+                       preds = predict(had_full_lm, newdata = had_sst))
+
+## Predicted year means
+# 1870: 27.04041
+# 2019: 27.62056
+# Rate: 0.003894 per year (0.039 per decade)
+
+
+
+## Coral reefs from 1990-2019 (HadISST; will update this to 2020 once that data are released) — 
+had_sst_sub <- subset(had_sst, year >= 1990)
+had_sub_lm <- lm(sst ~ year, data = had_sst_sub)
+had_sub_lm
+
+had_sub_lm_pred <- data.frame(time = had_sst_sub$year,
+                               sst = had_sst_sub$sst,
+                               preds = predict(had_sub_lm, newdata = had_sst_sub))
+
+## Predicted year means
+# 1990: 27.34772
+# 2019: 27.82927
+# Rate: 0.01661 per year (0.166 per decade)
+
+
+
+## Coral reefs with Pathfinder from 1982-2019 — 
+#path_sst <- sst_gam_df
+path_full_lm <- lm(sst ~ year, data = path_sst)
+path_full_lm
+
+path_full_lm_pred <- data.frame(time = path_sst$year,
+                               sst = path_sst$sst,
+                               preds = predict(path_full_lm, newdata = path_sst))
+
+## Predicted year means
+# 1982: 26.84132
+# 2019: 27.59676
+# Rate: 0.02042 per year (0.204 per decade)
+
+
+
+## Coral reefs with Pathfinder from 1990-2019 — 
+path_sst_sub <- subset(path_sst, year >= 1990)
+path_sub_lm <- lm(sst ~ year, data = path_sst_sub)
+path_sub_lm
+
+path_sub_lm_pred <- data.frame(time = path_sst_sub$year,
+                              sst = path_sst_sub$sst,
+                              preds = predict(path_sub_lm, newdata = path_sst_sub))
+
+## Predicted year means
+# 1990: 27.00363
+# 2019: 27.59715
+# Rate: 0.02047 per year (0.205 per decade)
+
+
+####################### Basin
+## Caribbean basin from 1870-2019 (HadISST; will update this to 2020 once that data are released) — 
+
+
+
+## Caribbean basin from 1990-2019 (HadISST; will update this to 2020 once that data are released) — 
+
+
+
+## Caribbean basin from 1990-2019 with Pathfinder — 
+
+
+
+
+region_names <- levels(factor(ecoregion_sst$ecoregion))
+
+#ecoregion_sst_sub <- subset(ecoregion_sst, year >= 1990)
+
+
+ecoregion_slope <- data.frame(ecoregion = character(),
+                              slope = numeric())
+
+for (region in 1:length(region_names)) {
+  
+  ecoregion_subset <- subset(ecoregion_sst, ecoregion == region_names[region])
+  ecoregion_lm <- lm(mean_sst ~ year, data = ecoregion_subset)
+  slope <- ecoregion_lm[["coefficients"]][["year"]]
+  
+  slope_df <- data.frame(ecoregion = region_names[region],
+                         slope = (slope*10))
+  
+  ecoregion_slope <- rbind(ecoregion_slope, slope_df)
+  }
+
+
+
+
+
+
+#############
+
+region_names <- levels(factor(ecoregion_sst$ecoregion))
+ecoregion_warm_year <- data.frame(ecoregion = region_names,
+                                  warm_year = c(1986, 1985, 1979, 1986, 1975, 1979, 1981, 1993))
+
+ecoregion_sst <- ecoregion_sst %>% 
+  left_join(ecoregion_warm_year, by = c("ecoregion" = "ecoregion"))
+
+
+ecoregion_slope <- data.frame(ecoregion = character(),
+                              warm_year = numeric(),
+                              slope = numeric())
+
+
+for (region in 1:length(region_names)) {
+  
+  ecoregion_subset <- subset(ecoregion_sst, ecoregion == ecoregion_warm_year[region, 1])
+  ecoregion_subset <- subset(ecoregion_subset, year >= ecoregion_warm_year[region, 2])
+  ecoregion_lm <- lm(mean_sst ~ year, data = ecoregion_subset)
+  slope <- ecoregion_lm[["coefficients"]][["year"]]
+  
+  slope_df <- data.frame(ecoregion = ecoregion_warm_year[region, 1],
+                         warm_year = ecoregion_warm_year[region, 2],
+                         slope = (slope*10))
+  
+  ecoregion_slope <- rbind(ecoregion_slope, slope_df)
+}
 
 
 ```
