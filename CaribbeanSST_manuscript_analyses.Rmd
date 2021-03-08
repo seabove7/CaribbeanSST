@@ -61,10 +61,10 @@ date <- Sys.Date()
 
 
 ## spatial subsetting for Caribbean region
-Xmin<- -100
-Xmax<- -55
-Ymin<- 0
-Ymax<- 40
+Xmin <- -100
+Xmax <- -55
+Ymin <- 0
+Ymax <- 40
 
 
 ## set the projection
@@ -201,7 +201,8 @@ HadISST reports monthly SSTs at 1$^\circ$ resolution. [Data can be accessed here
 
 ## read in the HadISST raster
 had_data <- HadISST_sst_path
-data_brick <- brick(had_data) # read SST data as rasterbrick
+#data_brick <- brick(had_data) # read SST data as rasterbrick
+data_brick <- brick("/Users/colleen/Downloads/HadISST_sst.nc")
 data_brick <- crop(data_brick, extent(Xmin, Xmax, Ymin, Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
 
 
@@ -214,21 +215,21 @@ nc_longs[nc_longs>180] <- nc_longs[nc_longs>180]-360
 #time handling
 raw_times <- ncdf_file$dim$time$vals #times are seconds after the "start of time"
 startoftime <- substr(ncdf_file$dim$time$units,1,19) #HadISST
-nc_times <- as.POSIXct(gsub("days since ","",startoftime), tz="UTC", format='%Y-%m-%d')+(raw_times*60*60*24) #HadISST
+nc_times <- as.POSIXct(gsub("days since ","",startoftime), tz="UTC", format='%Y-%m-%d') + (raw_times*60*60*24) #HadISST
 nc_times <- nc_times+3600*3 #to center readings at noon - just cosmetics
 nc_close(ncdf_file) #close the file
 
 #temporal subsetting  
 start_date <- "1870/01/01"
-end_date <- "2019/12/31"
+end_date <- "2020/12/31"
 start_date <- as.POSIXct(start_date,tz="UTC")
 end_date <- as.POSIXct(end_date,tz="UTC")
 
-#restrict temporally
-Tstart_index <- min(which(difftime(nc_times,start_date)>0))
-Tend_index <- min(which(difftime(nc_times,end_date)>0))
-data_brick <- data_brick[[Tstart_index:Tend_index]]
-time <- nc_times[Tstart_index:Tend_index]
+##restrict temporally - here we are not restricting temporally so not data is being removed here
+#Tstart_index <- min(which(difftime(nc_times,start_date)>0))
+#Tend_index <- min(which(difftime(nc_times,end_date)>0))
+#data_brick <- data_brick[[Tstart_index:Tend_index]]
+time <- nc_times[Tstart_index:length(nc_times)]
 
 save(time, nc_times, file = "data/HadISST/HadISST_times.Rdata") # save the time variables for IDs for running scripts remotely
 
@@ -237,9 +238,8 @@ save(time, nc_times, file = "data/HadISST/HadISST_times.Rdata") # save the time 
 start_dateb <- "1981-08-16" #"1990-01-16" 
 start_dateb <- as.POSIXct(start_dateb, tz="UTC")
 
-Tstart_indexb <- min(which(difftime(nc_times, start_dateb)>0))
-data_brickb <- data_brick[[Tstart_indexb:Tend_index]]
-timeb <- nc_times[Tstart_indexb:Tend_index]
+data_brickb <- data_brick[[Tstart_indexb:length(nc_times)]]
+timeb <- nc_times[Tstart_indexb:length(nc_times)]
 
 ```
 
@@ -502,7 +502,7 @@ had_sst_xts <- xts(t(had_sst), time) # t is used to transpose the matrix because
 had_sst_df <- data.frame(date=index(t(had_sst_xts)), coredata(t(had_sst_xts))) # convert xts object to dataframe
 had_sst_df$reef <- factor(seq(1, length(had_sst_df$date), 1)) # ID the columns to identify unique reefs
 had_sst_df$date <- NULL # remove this column since it is repetitive 
-had_sst_long <- gather(had_sst_df, date, sst, X1870.01.16.15.00.00:X2020.01.16.15.00.00) # convert from wide to long format
+had_sst_long <- gather(had_sst_df, date, sst, X1870.01.16.15.00.00:X2020.12.16.15.00.00) # convert from wide to long format
 
 ## update the dataframe for saving
 had_gps <- had_sst_long %>% separate(date, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
@@ -512,7 +512,7 @@ had_gps <- spread(had_gps, reef, sst)
 
 ## save the final dataframe (.csv or Rdata)
 #write.csv(had_gps, file = "data/HadISST/HadISST_reefs_SST_update.csv") # to save file as .csv
-save(had_gps, file = "data/HadISST/HadISST_reefs_SST_update2.Rdata") # to save file as Rdata (I saved as Rdata since it is large)
+save(had_gps, file = "data/HadISST/HadISST_reefs_SST_update.Rdata") # to save file as Rdata (I saved as Rdata since it is large)
 
 ```
 
@@ -521,7 +521,7 @@ save(had_gps, file = "data/HadISST/HadISST_reefs_SST_update2.Rdata") # to save f
 
 ```{r had monthly SST dataframe construction}
 
-load("data/HadISST/HadISST_reefs_SST_update2.Rdata")
+load("data/HadISST/HadISST_reefs_SST_update.Rdata")
 
 had_full <- had_gps # only need to use this to make the UPDATED reef SST dataframe compatible below
 
@@ -569,7 +569,7 @@ hadplot_markdown <- ggplot() +
   scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
   ylab('SST (°C)') +
-  ggtitle("HadISST (1870 - 2019)") + 
+  ggtitle("HadISST (1870 - 2020)") + 
   theme(plot.title = element_text(size = 13)) +
   ggsave("figures/Fig2_HadISST_SST_monthly.pdf", width = 6, height = 3.5)
 
@@ -2236,20 +2236,24 @@ ecoregion_sst <- subset(ecoregion_sst, year != "2020")
 
 ## Load the ecoregion extracted SST data (here using Rdata, but you can use csv if smaller)
 eco_sst_path_df <- readRDS("data/Pathfinder/Ecoregion_SST/Pathfinder_ecoregion_sst.rds")
+load("data/Pathfinder/Pathfinder_times.Rdata") # load the Pathfinder R data containing 'times'
 
 dates <- data.frame(date = paste("X", rep(1:460, 1), sep = ""),
-                       date2 = time)
+                    date3 = time,
+                    date2 = time)
+
+
 
 # Rename "Northern GoM" and "Northern GoM" to just GoM (these will be considered the same ecoregion from here on)
 eco_sst_path_df$ecoregion <- gsub("Northern G", "G", eco_sst_path_df$ecoregion)
 eco_sst_path_df$ecoregion <- gsub("Southern G", "G", eco_sst_path_df$ecoregion)
 
-eco_sst_path_df <- eco_sst_path_df %>% 
-  group_by(ecoregion, date) %>% 
-  summarize(mean_sst = mean(sst, na.rm = TRUE),
-            max = max(sst, na.rm = TRUE),
-            min = min(sst, na.rm = TRUE),
-            n = n())
+#eco_sst_path_df <- eco_sst_path_df %>% 
+#  group_by(ecoregion, date) %>% 
+#  summarize(mean_sst = mean(sst, na.rm = TRUE),
+#            max = max(sst, na.rm = TRUE),
+#            min = min(sst, na.rm = TRUE),
+#            n = n())
 
 eco_sst_path_df <- left_join(eco_sst_path_df, dates, by = c("date" = "date"))
 
@@ -2650,33 +2654,45 @@ for (region in 1:length(region_names)) {
 
 #############
 
-region_names <- levels(factor(ecoregion_sst$ecoregion))
+region_names <- levels(factor(eco_sst_path_df$ecoregion))
 ecoregion_warm_year <- data.frame(ecoregion = region_names,
-                                  warm_year = c(1986, 1985, 1979, 1986, 1975, 1979, 1981, 1993))
+                                  warm_year = c(1986, 1985, 1980, 1986, 1980, 1980, 1981, 1993))
 
-ecoregion_sst <- ecoregion_sst %>% 
+eco_sst_path_df <- eco_sst_path_df %>% 
   left_join(ecoregion_warm_year, by = c("ecoregion" = "ecoregion"))
 
 
 ecoregion_slope <- data.frame(ecoregion = character(),
                               warm_year = numeric(),
-                              slope = numeric())
+                              slope = numeric(),
+                              lw_CI = numeric(),
+                              up_CI = numeric())
 
 
 for (region in 1:length(region_names)) {
   
-  ecoregion_subset <- subset(ecoregion_sst, ecoregion == ecoregion_warm_year[region, 1])
+  ecoregion_subset <- subset(eco_sst_path_df, ecoregion == ecoregion_warm_year[region, 1])
   ecoregion_subset <- subset(ecoregion_subset, year >= ecoregion_warm_year[region, 2])
-  ecoregion_lm <- lm(mean_sst ~ year, data = ecoregion_subset)
+  ecoregion_lm <- lm(sst ~ year, data = ecoregion_subset)
   slope <- ecoregion_lm[["coefficients"]][["year"]]
+  lw_CI <- confint(ecoregion_lm, level = 0.95)[2,1]
+  up_CI <- confint(ecoregion_lm, level = 0.95)[2,2]
   
   slope_df <- data.frame(ecoregion = ecoregion_warm_year[region, 1],
                          warm_year = ecoregion_warm_year[region, 2],
-                         slope = (slope*10))
+                         slope = (slope * 10),
+                         lw_CI = (lw_CI * 10),
+                         up_CI = (up_CI * 10))
   
   ecoregion_slope <- rbind(ecoregion_slope, slope_df)
 }
 
+ecoregion_slope$total_warm <- ((ecoregion_slope$slope / 10) * (2019 - ecoregion_slope$warm_year))
+
+ggplot(data = ecoregion_slope, aes(x = ecoregion, y = slope, colour = warm_year)) +
+  theme_cowplot() +
+  geom_linerange(aes(ymin = lw_CI, ymax = up_CI)) +
+  geom_point()
 
 ```
 
