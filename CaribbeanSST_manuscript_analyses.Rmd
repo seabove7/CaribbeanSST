@@ -48,6 +48,7 @@ library(binr)
 library(fields)
 library(gganimate)
 library(sp)
+library(mgcv)
 library(plotly)
 library(grDevices)
 library(repmis)
@@ -115,7 +116,7 @@ WCMC008_CoralReef2018_Py_v4_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/
 ecoregion_shape_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/MEOW/meow_ecos.shp"
 
 ## HadISST_sst.nc: 
-# Dropbox link: https://www.dropbox.com/s/o6filpg0b3xe5i5/HadISST_sst.nc?dl=0
+# Dropbox link: https://www.dropbox.com/s/6apxz5mqz2e3i6v/HadISST_sst.nc?dl=0
 HadISST_sst_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/HadISST_sst.nc"
 
 ## pathfinder_combined_monthly_data.nc: 
@@ -201,8 +202,7 @@ HadISST reports monthly SSTs at 1$^\circ$ resolution. [Data can be accessed here
 
 ## read in the HadISST raster
 had_data <- HadISST_sst_path
-#data_brick <- brick(had_data) # read SST data as rasterbrick
-data_brick <- brick("/Users/colleen/Downloads/HadISST_sst.nc")
+data_brick <- brick(had_data) # read SST data as rasterbrick
 data_brick <- crop(data_brick, extent(Xmin, Xmax, Ymin, Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
 
 
@@ -226,7 +226,7 @@ start_date <- as.POSIXct(start_date,tz="UTC")
 end_date <- as.POSIXct(end_date,tz="UTC")
 
 ##restrict temporally - here we are not restricting temporally so not data is being removed here
-#Tstart_index <- min(which(difftime(nc_times,start_date)>0))
+Tstart_index <- min(which(difftime(nc_times,start_date)>0))
 #Tend_index <- min(which(difftime(nc_times,end_date)>0))
 #data_brick <- data_brick[[Tstart_index:Tend_index]]
 time <- nc_times[Tstart_index:length(nc_times)]
@@ -237,6 +237,7 @@ save(time, nc_times, file = "data/HadISST/HadISST_times.Rdata") # save the time 
 ### subsetting the HadISST raster for 1981 - 2019 timespand for comparison with Pathfinder
 start_dateb <- "1981-08-16" #"1990-01-16" 
 start_dateb <- as.POSIXct(start_dateb, tz="UTC")
+Tstart_indexb <- min(which(difftime(nc_times,start_dateb)>0))
 
 data_brickb <- data_brick[[Tstart_indexb:length(nc_times)]]
 timeb <- nc_times[Tstart_indexb:length(nc_times)]
@@ -562,7 +563,7 @@ hadplot_markdown <- ggplot() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1), text = element_text(size = 14)) +
   theme(legend.position = c(0.065, 0.85), legend.key.size = unit(0.3, "cm"), legend.background = element_rect(fill = NA), plot.title = element_text(size = 12)) + # legend theme
   guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
-  geom_line(data = had_full2[-151,], aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
+  geom_line(data = had_full2, aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
   scale_colour_gradient2("", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(had_full2$year), space="Lab", breaks = seq(1870, 2020, 50)) +
   #geom_ribbon(data = HADI_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
   #geom_line(data = HADI_month_avg, aes(x = month, y = mean), colour = "black", group = 1, size = 1.5) +
@@ -580,7 +581,7 @@ had_plot_gif <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1)) +
   guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
-  geom_line(data = had_full2[-151,], aes(x = month, y = mean_temp, group = year, colour = year), size = 1) +
+  geom_line(data = had_full2, aes(x = month, y = mean_temp, group = year, colour = year), size = 1) +
   scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(had_full2$year), space="Lab") +
   #geom_ribbon(data = HADI_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
   #geom_line(data = HADI_month_avg, aes(x = month, y = mean), colour = "black", group = 1, size = 1.5) +
@@ -628,10 +629,8 @@ sst_gam_df <- gather(had_full, reef, sst, `1`:`5607`)
 sst_gam_df$date <- gsub("\\X", "", sst_gam_df$date) # convert year to numeric and remove 'X'
 sst_gam_df <- sst_gam_df %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
 sst_gam_df$date <- as.Date(with(sst_gam_df, paste(year, month, day, sep="-")), "%Y-%m-%d")
-sst_gam_df <- subset(sst_gam_df, year != "2020")
 
 
-library(mgcv)
 ### modelling withOUT month:
 sst_gam_df3 <- sst_gam_df %>% 
   group_by(year) %>% 
@@ -693,17 +692,17 @@ HadISST_SST_plot <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14)) +
   #geom_vline(xintercept = 1981, colour = "lightgrey") +
-  geom_hline(yintercept = mean(HADI_year_avg[-151,]$mean), colour = "grey", linetype = 2) +
-  geom_ribbon(data = HADI_year_avg[-151,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
-  #geom_line(data = HADI_year_avg[-151,], aes(x = year, y = mean), colour = "black", group = 1, size = 1, alpha = 0.7) + # mean sst
-  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2019)) +
+  geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "grey", linetype = 2) +
+  geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
+  #geom_line(data = HADI_year_avg, aes(x = year, y = mean), colour = "black", group = 1, size = 1, alpha = 0.7) + # mean sst
+  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020)) +
   ylab('SST (°C)') +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
-  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) + # max sst
-  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + # min sst
+  geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) + # max sst
+  geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + # min sst
   geom_smooth(data = sst_gam_df, method = "gam", aes(x = year, y = sst), colour = "black", group = 1, size = 1, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp over all data
   #ggtitle("HadISST (1870 - 2019)") +
-  coord_cartesian(xlim = c(1870, 2019)) +
+  coord_cartesian(xlim = c(1870, 2020)) +
   ggsave("figures/Fig3_HadISST_SST_annual.pdf", width = 6, height = 4)
 
 ggplotly(HadISST_SST_plot)
@@ -1092,6 +1091,8 @@ path_gps <- spread(path_gps, reef, sst)
 #write.csv(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update.csv") # to save file as .csv
 saveRDS(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update2.rds") # to save file as Rdata (I saved as Rdata since it is large)
 
+path_full <- path_gps # only need to use this to make the UPDATED reef SST dataframe compatible below
+
 ```
 
 
@@ -1101,8 +1102,6 @@ saveRDS(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update2.rds") # t
 
 path_full <- readRDS("data/Pathfinder/Pathfinder_reefs_SST_update2.rds")
 #load("data/Pathfinder/Pathfinder_reefs_SST_update2.Rdata")
-
-path_full <- path_gps # only need to use this to make the UPDATED reef SST dataframe compatible below
 
 ## create a new dataframe of simple stats per time
 path_full2 <- data.frame("date" = path_full[,1],
@@ -1275,16 +1274,16 @@ combo_plot <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
   # add the HadISST dataset
-  geom_hline(yintercept = mean(HADI_year_avg[-151,]$mean), colour = "darkgrey", linetype = 2) +
-  geom_ribbon(data = HADI_year_avg[-151,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.05, linetype = 1) + 
-  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5, alpha = 0.3) +
-  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5, alpha = 0.3) + 
-  geom_line(data = HADI_year_avg[-151,], aes(x = year, y = mean), colour = "darkgrey", group = 1, size = 0.5, alpha = 0.3) + 
-  geom_smooth(data = HADI_year_avg[-151,], method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "darkgrey", group = 1, size = 1, se = FALSE, alpha = 0.3) +
+  geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "darkgrey", linetype = 2) +
+  geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.05, linetype = 1) + 
+  geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5, alpha = 0.3) +
+  geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5, alpha = 0.3) + 
+  geom_line(data = HADI_year_avg, aes(x = year, y = mean), colour = "darkgrey", group = 1, size = 0.5, alpha = 0.3) + 
+  geom_smooth(data = HADI_year_avg, method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "darkgrey", group = 1, size = 1, se = FALSE, alpha = 0.3) +
   # add the Pathfinder dataset on top
   geom_hline(yintercept = mean(Path_year_avg[-1,]$mean), colour = "black", linetype = 2) +
   geom_ribbon(data = Path_year_avg[-1,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) +
-  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2019)) +
+  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020)) +
   ylab('SST (°C)') +
   geom_line(data = Path_year_avg[-1,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
   geom_line(data = Path_year_avg[-1,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
@@ -1292,7 +1291,7 @@ combo_plot <- ggplot() +
   geom_smooth(data = Path_year_avg[-1,], method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "black", group = 1, size = 1, se = FALSE) +
   ggtitle("Caribbean coral reefs historic SST trends") +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
-  coord_cartesian(xlim = c(1870, 2019)) +
+  coord_cartesian(xlim = c(1870, 2020)) +
   ggsave("figures/Supplemental_figs/Both_SST_trends.pdf", width = 6, height = 4) # I have not saveed this figure outside the Rmarkdown file
 
 ggplotly(combo_plot)
@@ -1451,7 +1450,7 @@ path_map <- ggplot() +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   ylab("Latitude") +
   xlab("Longitude") +
-  ggtitle(paste0("SST slope from ", format.Date(start_date2, "%Y"), " to ", format.Date(end_date2, "%Y")," (Pathfinder)"))
+  ggtitle(paste0("SST slope from ", format.Date(start_dateb, "%Y"), " to ", format.Date(end_date, "%Y")," (Pathfinder)"))
 
 ```
 
@@ -1486,527 +1485,6 @@ plot_grid(path_map, path_pval_map, labels = c("A", "B")) +
 
 
 ## <span style="color: #313695;">Additional exploratory analyses</span>{.tabset}
-
-### Historic maximum SST (map)
-
-#### HadISST (1870 - 2019)
-
-```{r HadISST full max SST df}
-
-##### Maximum SST extraction and dataframe
-
-## Create raster layer of the max SST per pixel throughout all time
-raster_max <- max(data_brick)
-
-## Convert the raster of SST to a df for plotting
-had_max <- as.data.frame(as(raster_max, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
-colnames(had_max) <- c("max", "x", "y")
-
-
-
-##### Maximum SST extraction and dataframe
-
-## Convert the raster of observational year to a df for plotting
-had_max_yr <- read.csv("data/HadISST/HadISST_MaxSST_layers.csv", header = TRUE)
-
-## Create dataframe of layer and year
-load("data/HadISST/HadISST_times.Rdata") # load in the time data again for HadISST 
-times_had <- data.frame("time" = time, "layer" = seq(1,1801)) # dataframe of year and layer ID
-times_had <- times_had %>% separate(time, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
-times_had <- times_had[,-c(3:6)] # subset out the day/time columns
-
-## Update max date dataframe with time instead of layer
-had_max_time <- merge(had_max_yr, times_had, layer = layer) # merge together the dataframes so that corresponding year matches
-had_max_time$year <- as.numeric(had_max_time$year) # convert year to numeric
-had_max_time$month <- factor(had_max_time$month) # convert month to factor
-had_max_time <- had_max_time %>% mutate(month = recode(month, '01' = 'Jan', '02' = 'Feb', '03' = 'Mar', '04' = 'Apr', '05' = 'May', '06' = 'Jun', '07' = 'Jul', '08' = 'Aug', '09' = 'Sep', '10' = 'Oct', '11' = 'Nov', '12' = 'Dec')) # replace month number with name
-
-```
-
-```{r had max SST map, message=FALSE, warning=FALSE, fig.align='center' , fig.width=12, fig.height=6}
-
-### Plot the max SST per pixel (full HadISST range)
-had_max_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_max, aes(x = x, y = y, fill = max), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_distiller("ºC", palette = "Reds", trans = "reverse", limits = c(35, 26)) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle(paste0("Maximum recorded SST (", format.Date(start_date, "%Y"), " - ", format.Date(end_date, "%Y"),")")) 
-
-
-## Plot the year of the max SST
-had_max_year_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_max_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
-  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000), limits = c(2020, 1870)) +
-  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle("Year of maximum SST") 
-
-  
-## Plot the month of the max SST
-had_max_month_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_max_time, aes(x = x, y = y, fill = month), alpha=0.8) + 
-  scale_fill_brewer("", palette = "BrBG") +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle("Month of maximum SST") 
-
-
-## Combined max SST and year observed plot
-plot_grid(had_max_plot, had_max_year_plot, had_max_month_plot, labels = c("A", "B", "C"), ncol = 3) +
-  ggsave("figures/Fig9_HadISST_maxSST.pdf", width = 14, height = 5)
-
-```
-
-**Figure 9 |** Maximum SST ($^\circ$C) recorded in the entire HadISST dataset (from `r format.Date(start_date, "%Y")` to `r format.Date(end_date, "%Y")`) within each grid (**A**). The year (**B**) and month (**C**) in which each maximum SST was observed is also depicted. 
-
-
-<br/> 
-
-#### HadISST (1981 - 2019)
-
-```{r HadISST sub max SST df}
-
-##### Maximum SST extraction and dataframe (HadISST subset)
-
-## Create raster layer of the max SST per pixel throughout all time
-raster_max_sub <- max(data_brickb)
-
-## Convert the raster of SST to a df for plotting
-had_max_sub <- as.data.frame(as(raster_max_sub, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
-colnames(had_max_sub) <- c("max", "x", "y")
-
-
-
-##### Maximum SST extraction and dataframe (HadISST subset)
-
-## Convert the raster of observational year to a df for plotting
-had_max_sub_yr <- read.csv("data/HadISST/HadISST_MaxSST_subset_layers.csv", header = TRUE)
-
-## Create dataframe of layer and year
-load("data/HadISST/HadISST_times.Rdata") # load in the time data again for HadISST 
-times_had <- data.frame("time" = time[1340:1801], "layer" = seq(1, 462)) # dataframe of year and layer ID
-times_had <- times_had %>% separate(time, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
-times_had <- times_had[,-c(3:6)] # subset out the day/time columns
-
-## Update max date dataframe with time instead of layer
-had_max_sub_time <- merge(had_max_sub_yr, times_had, layer = layer) # merge together the dataframes so that corresponding year matches
-had_max_sub_time$year <- as.numeric(had_max_sub_time$year) # convert year to numeric
-had_max_sub_time$month <- factor(had_max_sub_time$month) # convert month to factor
-had_max_sub_time <- had_max_sub_time %>% mutate(month = recode(month, '01' = 'Jan', '02' = 'Feb', '03' = 'Mar', '04' = 'Apr', '05' = 'May', '06' = 'Jun', '07' = 'Jul', '08' = 'Aug', '09' = 'Sep', '10' = 'Oct', '11' = 'Nov', '12' = 'Dec')) # replace month number with name
-
-```
-
-```{r had max subset SST map, message=FALSE, warning=FALSE, fig.align='center' , fig.width=12, fig.height=6}
-
-### Plot the max SST per pixel (subset HadISST range)
-had_max_subset_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_max_sub, aes(x = x, y = y, fill = max), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_distiller("ºC", palette = "Reds", trans = "reverse", limits = c(35, 26)) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle(paste0("Maximum recorded SST (", format.Date(start_dateb, "%Y"), " - ", format.Date(end_date, "%Y"),")")) 
-
-
-## Plot the year of the max SST (subset HadISST range)
-had_max_subset_year_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_max_sub_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
-  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000), limits = c(2020, 1870)) +
-  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle("Year of maximum SST") 
-
-  
-## Plot the month of the max SST (subset HadISST range)
-had_max_subset_month_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_max_sub_time, aes(x = x, y = y, fill = month), alpha=0.8) + 
-  scale_fill_brewer("", palette = "BrBG") +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle("Month of maximum SST") 
-
-
-## Combined max SST and year observed plot
-plot_grid(had_max_subset_plot, had_max_subset_year_plot, had_max_subset_month_plot, labels = c("A", "B", "C"), ncol = 3) +
-  ggsave("figures/Fig10_HadISST_maxSST_subset.pdf", width = 14, height = 5)
-
-```
-
-**Figure 10 |** Maximum SST ($^\circ$C) recorded in the subset HadISST dataset (`r format.Date(start_date, "%Y")` - `r format.Date(end_date, "%Y")`) within each grid (**A**). The year (**B**) and month (**C**) in which each maximum SST was observed is also depicted. 
-
-
-<br/>
-
-#### Pathfinder (1981 - 2019)
-
-```{r path sub max SST df}
-
-##### Maximum SST extraction and dataframe (Pathfinder)
-
-## Create raster layer of the max SST per pixel throughout all time
-path_brick <- brick(Pathfinder_monthly_edit_path)
-raster_max <- max(path_brick, na.rm = TRUE)
-
-## Convert the raster of SST to a df for plotting
-path_max <- as.data.frame(as(raster_max, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
-colnames(path_max) <- c("max", "x", "y")
-
-
-
-###### Maximum SST extraction and dataframe (Pathfinder)
-#
-### forloop takes about 1.75 hours
-#
-### Convert the raster of observational year to a df for plotting
-##path_max_yr <- read.csv("data/Pathfinder/Pathfinder_MaxSST_layers.csv", header = TRUE)
-#path_max_brick <- brick("data/Pathfinder/Pathfinder_MaxSST_layers.nc")[[1]]
-#
-#plot(path_max_brick)
-#path_max_layer <- as.data.frame(as(path_max_brick, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
-#colnames(path_max_layer) <- c("layer", "x", "y")
-#
-### Create dataframe of layer and year
-#load("data/Pathfinder/Pathfinder_times.Rdata") # load in the time data again for Pathfinder 
-#times_path <- data.frame("time" = time, "layer" = seq(1, 460)) # dataframe of year and layer ID
-#times_path <- times_path %>% separate(time, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
-#times_path <- times_path[,-c(3:6)] # subset out the day/time columns
-#
-### Update max date dataframe with time instead of layer
-#path_max_time <- merge(path_max_yr, times_had, layer = layer) # merge together the dataframes so that corresponding year matches
-#path_max_time$year <- as.numeric(path_max_time$year) # convert year to numeric
-#path_max_time$month <- factor(path_max_time$month) # convert month to factor
-#path_max_time <- path_max_time %>% mutate(month = recode(month, '01' = 'Jan', '02' = 'Feb', '03' = 'Mar', '04' = 'Apr', '05' = 'May', '06' = 'Jun', #'07' = 'Jul', '08' = 'Aug', '09' = 'Sep', '10' = 'Oct', '11' = 'Nov', '12' = 'Dec')) # replace month number with name
-
-```
-
-```{r path max SST map, message=FALSE, warning=FALSE, fig.align='center' , fig.width=12, fig.height=6}
-
-### Plot the max SST per pixel
-path_max_subset_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = path_max, aes(x = x, y = y, fill = max), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_distiller("ºC", palette = "Reds", trans = "reverse", limits = c(35, 26)) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle(paste0("Maximum recorded SST (", format.Date(start_dateb, "%Y"), " - ", format.Date(end_date, "%Y"),")")) 
-path_max_subset_plot
-
-
-### Plot the year of the max SST 
-#path_max_subset_year_plot <- ggplot() +  
-#  theme_bw() +
-#  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = #element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-#  geom_raster(data = path_max_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
-#  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000), limits = c(2020, 1870)) +
-#  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-#  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-#  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-#  ylab("Latitude") +
-#  xlab("Longitude") +
-#  ggtitle("Year of maximum SST") 
-#
-#
-### Plot the month of the max SST
-#path_max_subset_month_plot <- ggplot() +  
-#  theme_bw() +
-#  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = #element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-#  geom_raster(data = path_max_time, aes(x = x, y = y, fill = month), alpha=0.8) + 
-#  scale_fill_brewer("", palette = "BrBG") +
-#  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-#  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-#  ylab("Latitude") +
-#  xlab("Longitude") +
-#  ggtitle("Month of maximum SST") 
-#
-#
-### Combined max SST and year observed plot
-#plot_grid(path_max_subset_plot, path_max_subset_year_plot, path_max_subset_month_plot, labels = c("A", "B", "C"), ncol = 3) +
-#  ggsave("figures/Fig11_Pathfinder_maxSST_subset.pdf", width = 14, height = 5)
-
-```
-
-**Figure 11 |** Maximum SST ($^\circ$C) recorded in the subset Pathfinder dataset (`r format.Date(start_date2, "%Y")` - `r format.Date(end_date2, "%Y")`) within each grid (**A**).
-
-<br/><br/>
-
----
-
-
-### Historic minimum SST (map)
-
-#### HadISST (1870 - 2019)
-
-```{r HadISST full min SST df}
-
-##### Minimum SST extraction and dataframe
-
-## Create raster layer of the min SST per pixel throughout all time
-raster_min <- min(data_brick, na.rm = TRUE)
-
-## Convert the raster of SST to a df for plotting
-had_min <- as.data.frame(as(raster_min, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
-colnames(had_min) <- c("min", "x", "y")
-
-
-
-##### Minimum SST extraction and dataframe
-
-## Convert the raster of observational year to a df for plotting
-had_min_yr <- read.csv("data/HadISST/HadISST_MinSST_layers.csv", header = TRUE)
-
-## Create dataframe of layer and year
-load("data/HadISST/HadISST_times.Rdata") # load in the time data again for HadISST 
-times_had <- data.frame("time" = time, "layer" = seq(1,1801)) # dataframe of year and layer ID
-times_had <- times_had %>% separate(time, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
-times_had <- times_had[,-c(3:6)] # subset out the day/time columns
-
-## Update min date dataframe with time instead of layer
-had_min_time <- merge(had_min_yr, times_had, layer = layer) # merge together the dataframes so that corresponding year matches
-had_min_time$year <- as.numeric(had_min_time$year) # convert year to numeric
-had_min_time$month <- factor(had_min_time$month) # convert month to factor
-had_min_time <- had_min_time %>% mutate(month = recode(month, '01' = 'Jan', '02' = 'Feb', '03' = 'Mar', '04' = 'Apr', '05' = 'May', '06' = 'Jun', '07' = 'Jul', '08' = 'Aug', '09' = 'Sep', '10' = 'Oct', '11' = 'Nov', '12' = 'Dec')) # replace month number with name
-
-```
-
-```{r had min SST map, message=FALSE, warning=FALSE, fig.align='center' , fig.width=12, fig.height=6}
-
-### Plot the min SST per pixel (full HadISST range)
-had_min_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_min, aes(x = x, y = y, fill = min), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_distiller("ºC", palette = "Blues", limits = c(5, 27)) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle(paste0("Minimum recorded SST (", format.Date(start_date, "%Y"), " - ", format.Date(end_date, "%Y"),")")) 
-
-
-## Plot the year of the min SST
-had_min_year_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_min_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
-  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000), limits = c(2020, 1870)) +
-  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle("Year of minimum SST") 
-
-
-## Plot the month of the min SST
-had_min_month_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_min_time, aes(x = x, y = y, fill = month), alpha=0.8) + 
-  scale_fill_brewer("", palette = "BrBG") +
-  guides(fill = guide_legend(nrow = 2)) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle("Month of minimum SST") 
-
-
-## Combined min SST and year observed plot
-plot_grid(had_min_plot, had_min_year_plot, had_min_month_plot, labels = c("A", "B", "C"), ncol = 3) +
-  ggsave("figures/Fig12_HadISST_minSST.pdf", width = 14, height = 5)
-
-```
-
-**Figure 12 |** Minimum SST ($^\circ$C) recorded in the entire HadISST dataset (from `r format.Date(start_date, "%Y")` to `r format.Date(end_date, "%Y")`) within each grid (**A**). The year (**B**) and month (**C**) in which each minimum SST was observed is also depicted. 
-
-
-<br/>
-
-#### HadISST (1981 - 2019)
-
-```{r HadISST sub min SST df}
-
-##### Minimum SST extraction and dataframe (HadISST subset)
-
-## Create raster layer of the min SST per pixel throughout all time
-raster_min_sub <- min(data_brickb, na.rm = TRUE)
-
-## Convert the raster of SST to a df for plotting
-had_min_sub <- as.data.frame(as(raster_min_sub, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
-colnames(had_min_sub) <- c("min", "x", "y")
-
-
-
-##### Minimum SST extraction and dataframe (HadISST subset)
-
-## Convert the raster of observational year to a df for plotting
-had_min_sub_yr <- read.csv("data/HadISST/HadISST_MinSST_subset_layers.csv", header = TRUE)
-
-## Create dataframe of layer and year
-load("data/HadISST/HadISST_times.Rdata") # load in the time data again for HadISST 
-times_had <- data.frame("time" = time[1340:1801], "layer" = seq(1, 462)) # dataframe of year and layer ID
-times_had <- times_had %>% separate(time, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
-times_had <- times_had[,-c(3:6)] # subset out the day/time columns
-
-## Update min date dataframe with time instead of layer
-had_min_sub_time <- merge(had_min_sub_yr, times_had, layer = layer) # merge together the dataframes so that corresponding year matches
-had_min_sub_time$year <- as.numeric(had_min_sub_time$year) # convert year to numeric
-had_min_sub_time$month <- factor(had_min_sub_time$month) # convert month to factor
-had_min_sub_time <- had_min_sub_time %>% mutate(month = recode(month, '01' = 'Jan', '02' = 'Feb', '03' = 'Mar', '04' = 'Apr', '05' = 'May', '06' = 'Jun', '07' = 'Jul', '08' = 'Aug', '09' = 'Sep', '10' = 'Oct', '11' = 'Nov', '12' = 'Dec')) # replace month number with name
-
-```
-
-```{r had min subset SST map, message=FALSE, warning=FALSE, fig.align='center' , fig.width=12, fig.height=6}
-
-### Plot the min SST per pixel (subset HadISST range)
-had_min_subset_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_min_sub, aes(x = x, y = y, fill = min), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_distiller("ºC", palette = "Blues", limits = c(5, 27)) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle(paste0("Minimum recorded SST (", format.Date(start_dateb, "%Y"), " - ", format.Date(end_date, "%Y"),")")) 
-
-
-## Plot the year of the min SST (subset HadISST range)
-had_min_subset_year_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_min_sub_time, aes(x = x, y = y, fill = year), alpha=0.8) + 
-  scale_fill_distiller("", palette = "YlGnBu", trans = "reverse", breaks = c(1900, 1950, 2000), limits = c(2020, 1870)) +
-  guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle("Year of minimum SST") 
-
-
-## Plot the month of the min SST (subset HadISST range)
-had_min_subset_month_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = had_min_sub_time, aes(x = x, y = y, fill = month), alpha=0.8) + 
-  scale_fill_brewer("", palette = "BrBG") +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  guides(fill = guide_legend(nrow = 2)) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle("Month of minimum SST") 
-
-
-## Combined min SST and year observed plot
-plot_grid(had_min_subset_plot, had_min_subset_year_plot, had_min_subset_month_plot, labels = c("A", "B", "C"), ncol = 3) +
-  ggsave("figures/Fig13_HadISST_minSST_subset.pdf", width = 14, height = 5)
-
-```
-
-**Figure 13 |** Minimum SST ($^\circ$C) recorded in the subset HadISST dataset (`r format.Date(start_date, "%Y")` - `r format.Date(end_date, "%Y")`) within each grid (**A**). The year (**B**) and month (**C**) in which each minimum SST was observed is also depicted. 
-
-
-<br/>
-
-#### Pathfinder (1981 - 2019)
-
-```{r path min SST df}
-
-##### Pathfinder min temp raster layer
-
-## create raster layer of the min SST per pixel
-path_brick <- brick(Pathfinder_monthly_edit_path)
-raster_p_min <- min(path_brick, na.rm = TRUE)
-
-## convert the raster of SST to a df for plotting
-path_min <- as.data.frame(as(raster_p_min, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
-colnames(path_min) <- c("min", "x", "y")
-
-
-## convert the raster of observational year to a df for plotting
-#path_min_yr <- as.data.frame(as(raster_min_yr, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
-#colnames(path_min_yr) <- c("year", "x", "y")
-
-```
-
-```{r path min SST map, message=FALSE, warning=FALSE, fig.align='center' , fig.width=12, fig.height=6}
-
-### Plot the min SST per pixel (Pathfinder)
-path_min_plot <- ggplot() +  
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(data = path_min, aes(x = x, y = y, fill = min), alpha=0.8, interpolate = TRUE) + 
-  scale_fill_distiller("ºC", palette = "Blues", limits = c(5, 27)) +
-  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
-  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-  ylab("Latitude") +
-  xlab("Longitude") +
-  ggtitle(paste0("Minimum recorded SST (", format.Date(start_dateb, "%Y"), " - ", format.Date(end_date, "%Y"),")"))
-path_min_plot
-
-### Plot the year of the min SST
-#path_min_year_subset_plot <- ggplot() +  
-#  theme_bw() +
-#  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = #element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-#  #geom_raster(data = path_min_yr_sub, aes(x = x, y = y, fill = year), alpha=0.8, interpolate = TRUE) + 
-#  scale_fill_distiller("ºC", palette = "Reds", trans = "reverse", limits = c(32, 26)) +
-#  geom_polygon(data = land, aes(x = long, y = lat, group = group), fill = "grey70", color='grey39', lwd = 0.1) +
-#  #guides(fill = guide_colorbar(reverse = TRUE, frame.colour = "black", ticks.colour = "black")) +
-#  coord_sf(xlim = c(-90,-59), ylim = c(8,33)) +
-#  ylab("Latitude") +
-#  xlab("Longitude") +
-#  ggtitle("Year of minimum recorded SST (Pathfinder)") 
-#
-#
-### Combined min SST and year observed plot
-#plot_grid(path_min_subset_plot, path_min_year_subset_plot, labels = c("A", "B")) +
-#  ggsave("figures/Fig13_Pathfinder_minSST_subset.pdf", width = 14, height = 5)
-#
-```
-
-**Figure 14 |** Minimum SST ($^\circ$C) recorded in the Pathfinder dataset (`r format.Date(start_date, "%Y")` - `r format.Date(end_date, "%Y")`) within each grid (**A**).
-
-<br/><br/>
-
----
-
 
 ### Regional SST analyses
 
@@ -2125,6 +1603,9 @@ ggplot() +
 
 #### SST extraction on reefs by ecoregion: this takes a while to run - can try to run remote
 
+data_brick <- brick(had_data) # read SST data as rasterbrick
+raster_brick <- crop(data_brick, extent(Xmin, Xmax, Ymin, Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
+
 ## Create an empty dataframe to populate while running the forloop with the following parameters:
 eco_sst_df <- data.frame('date' = integer(),
                      'sst' = integer(),
@@ -2141,8 +1622,8 @@ for(e in 1:length(eco_list)) {
   projection(subset_ecoreg) <- proj # modify the lat/lon projection to match reef points
   ecoregion_reefs <- reef_points[subset_ecoreg, ] # clip the reef points by the ecoregion bounds
   
-  for(i in 1:raster_brick@file@nbands) {
-    
+  for(i in 1:raster_brick@data@nlayers) {
+   
     ## Then, extract SST from reef locations wihtin the current ecoregion and append to dataframe
     raster <- raster_brick[[i]] # select the layer of the rasterbrick 
     sst_vals <- raster::extract(raster, ecoregion_reefs) # extract SST at lat/lon of each reef
@@ -2155,7 +1636,7 @@ for(e in 1:length(eco_list)) {
   }
 }
 
-## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
+n## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
 # *** Only uncomment these lines if you want to write over existing files ***
 #save(eco_sst_df, file = "data/HadISST/Ecoregion_SST/HadISST_ecoregion_sst.Rdata")
 #write.csv(eco_sst_df, file = "data/HadISST/Ecoregion_SST//HadISST_ecoregion_sst", row.names=FALSE)
@@ -2228,7 +1709,6 @@ ecoregion_sst <- eco_sst_df %>%
 ecoregion_sst <- ecoregion_sst %>% separate(date, c("year", "month", "day"), convert = TRUE) # create year, month, and day column columns
 ecoregion_sst$year <- as.numeric(gsub("\\X", "", ecoregion_sst$year)) # convert the year column to numerics and remove 'X'
 ecoregion_sst$month2 <- factor(ecoregion_sst$month) # make a month as a factor column for plotting  
-ecoregion_sst <- subset(ecoregion_sst, year != "2020")
 
 ```
 
@@ -2304,7 +1784,7 @@ sum(Had_eco_table2$n)
 ## Wider Caribbean
 # based off mean values per region per date
 Had_table_sub <- ecoregion_sst %>% 
-  filter(year %in% (1983:2019)) %>% 
+  filter(year %in% (1983:2020)) %>% 
   group_by(1) %>% 
   summarise(mean = round(mean(mean_sst), 2),
             min = round(min(mean_sst), 2),
@@ -2315,7 +1795,7 @@ Had_table_sub <- ecoregion_sst %>%
 ## By ecoregion
 # based off mean values per region per date
 Had_eco_table_sub <- ecoregion_sst %>% 
-  filter(year %in% (1983:2019)) %>% 
+  filter(year %in% (1983:2020)) %>% 
   group_by(ecoregion) %>% 
   summarise(mean = round(mean(mean_sst), 2),
             min = round(min(mean_sst), 2),
@@ -2340,7 +1820,7 @@ decade_mid <- Had_table %>%
             max = max(max))
 
 
-## Mean SST 2010 - 1019:
+## Mean SST 2010 - 2019:
 decade_last <- Had_table %>% 
   filter(year %in% (2010:2019)) %>% 
   summarise(mean = mean(mean),
@@ -2404,14 +1884,14 @@ ecoregion_year_mean$lab <- paste(LETTERS[1:8])
 ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 30, hjust = 0.8), text = element_text(size = 14)) +
-  geom_segment(data = ecoregion_year_mean, aes(y = mean, yend = mean, x = 1870, xend = 2019), colour = "grey", linetype = 2) +
+  geom_segment(data = ecoregion_year_mean, aes(y = mean, yend = mean, x = 1870, xend = 2020), colour = "grey", linetype = 2) +
   geom_ribbon(data = ecoregion_sst_annual, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
-  scale_x_continuous(name = "", breaks = seq(1880, 2019, 20)) +
+  scale_x_continuous(name = "", breaks = seq(1880, 2020, 20)) +
   ylab('SST (°C)') +
   geom_line(data = ecoregion_sst_annual, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
   geom_line(data = ecoregion_sst_annual, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
   geom_smooth(data = ecoregion_sst_annual, method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 0.5, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp
-  coord_cartesian(xlim = c(1870, 2019)) +
+  coord_cartesian(xlim = c(1870, 2020)) +
   scale_y_continuous(breaks = seq(20, 32, 2), limits = c(20, 32)) +
   facet_wrap(~ ecoregion, ncol = 2, scales = "free_y") +
   geom_text(data = ecoregion_year_mean, aes(x = -Inf, y = Inf, label = lab, group = ecoregion), fontface = "bold", size = 4.5, hjust = -0.5, vjust = 1.4) +
