@@ -1,0 +1,1586 @@
+---
+title: 'One Hundred and Fifty Years of Warming on Caribbean Coral Reefs'
+output:
+  html_document:
+    theme: simplex
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r knit options, include=FALSE}
+
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE)
+
+```
+
+```{r load libraries}
+
+### Used packages that need to be installed to run code:
+# install.packages("sf", "ncdf4", "ggrepel", "raster", "viridis", "maptools", "rgdal", "ggplot2", "cowplot", "tidyverse", "rnaturalearth", "xts", "RColorBrewer", "tidyr", "dplyr", "binr", "fields", "gganimate", "sp", "mgcv", "plotly", "grDevices", "repmis", "foreach", "kableExtra")
+
+# library(devtools)
+# devtools::install_github("NCAR/fields")
+# devtools::install_github("thomasp85/transformr") # need this for the GIFs of figures
+# devtools::install_github("paleolimbot/ggspatial")
+
+library(sf)
+library(ncdf4)
+library(ggrepel)
+library(raster) 
+library(viridis)
+library(maptools)
+library(rgdal)
+library(ggplot2)
+library(cowplot)
+library(tidyverse)
+library(rnaturalearth)
+library(xts)
+library(RColorBrewer)
+library(tidyr)
+library(dplyr)
+library(binr)
+library(fields)
+library(gganimate)
+library(sp)
+library(mgcv)
+library(foreach)
+library(plotly)
+library(kableExtra)
+library(grDevices)
+library(repmis)
+
+```
+
+```{r other setup}
+
+## set the current date
+date <- Sys.Date() 
+
+
+## spatial subsetting for Caribbean region
+Xmin <- -100
+Xmax <- -55
+Ymin <- 0
+Ymax <- 40
+
+
+## set the projection
+proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
+
+
+## set the binning of p-values for plotting
+bins <- c(-Inf, 0.0001, 0.001, 0.01, 0.05, 0.1, Inf)
+bin_names <- c("< 0.0001", "0.0001 - 0.001", "0.001 - 0.01", "0.01 - 0.05", "0.05 - 0.1", "> 0.1")
+
+
+## Create base map for SST maps
+map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
+  dplyr::rename(lon = long)
+
+
+## Make a shapefile of lat/lon bounds of MHW map
+# make dataframe of lat/lon
+bound_df <- data.frame("lon" = c(262.125, 285.125, 285.125, 302.125, 302.125, 285.125, 285.125, 276.125, 276.125, 271.125, 269.625, 262.125,262.125),
+                       "lat" = c(31, 31, 25.125, 25.125, 9.125, 9.125, 7.375, 7.375, 15.875, 15.875, 17.875, 17.875, 31))
+bound_df$lon <- bound_df$lon - 360 # convert lon back into -180 to 180
+bound_matrix <- data.matrix(bound_df) # Transform from dataframe to a matrix
+bound_poly <- Polygon(bound_matrix) # transform matrix to polygon
+bound_SP <- SpatialPolygons(list(Polygons(list(bound_poly), ID = "a")), proj4string=CRS(proj)) # convert polygon to SpatialPolygon object
+bound_SP_df <- as(bound_SP, "SpatialPolygonsDataFrame") # convert to SpatialPolygonsDataFrame
+
+```
+
+```{r setting non-git file paths}
+
+### Since the shape and netCDF files are too large to store on GitHub, those need to be stored locally.
+## Dropbox links are included to download the corresponding files. Just update the local path to each.
+## The paths for the files stored on Dropbox are below:
+
+## gshhs_f.b: coastline map shapefile
+# Dropbox link: 
+gshhs_f_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/gshhs_f.b"
+
+## WCMC008_CoralReef2018_Py_v4.shp: global coral reef shapefiles
+# Dropbox link: 
+WCMC008_CoralReef2018_Py_v4_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/14_001_WCMC008_CoralReefs2018_v4/01_Data/WCMC008_CoralReef2018_Py_v4.shp"
+
+## meow_ecos.shp: global ecoregion shapefiles
+# Web link: https://www.worldwildlife.org/publications/marine-ecoregions-of-the-world-a-bioregionalization-of-coastal-and-shelf-areas
+ecoregion_shape_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/MEOW/meow_ecos.shp"
+
+## HadISST_sst.nc: 
+# Dropbox link: 
+HadISST_sst_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/HadISST_sst.nc"
+
+## pathfinder_combined_monthly_data.nc: 
+# Dropbox link: 
+pathfinder_combined_monthly_data_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/pathfinder_combined_monthly_data.nc"
+
+## Pathfinder_monthly_edit.nc: 
+# Dropbox link:
+Pathfinder_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/PathfinderSST_monthly_edit.nc"
+
+## OISST_MHW_carib.Rda: 
+# Dropbox link: 
+MHW_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/OISST_MHW_carib.Rda"
+
+```
+
+<br/>
+
+#### Colleen B. Bove^1,2^*, Laura Mudge^1^, and John F. Bruno^1^
+
+^1^ The Department of Biology, The University of North Carolina at Chapel Hill, Chapel Hill, North Carolina, 27599-3280 USA. 
+
+^2^ The Department of Biology, Boston University, Boston, Massachusetts, 02215 USA. 
+
+* Corresponding author: colleenbove@gmail.com
+
+<br/>
+
+#### **Abstract:**
+
+*Abstract text will go here*
+
+<br/>
+
+##### **Citation:**
+
+*Citation will go here*
+
+
+<br/>
+
+## Caribbean Ecoregion Coral Reefs {.tabset}
+
+### <span style="color: #0072B2;">**Figure 1**</span>
+
+```{r read in land shapefile, include=FALSE}
+
+## read in the land shapefile with slightly expanded lat/lon limits
+if (!rgeosStatus()) gpclibPermit()
+gshhs.f.b <- gshhs_f_path
+land <- getRgshhsMap(gshhs.f.b, xlim = c(-105, -40), ylim = c(-10, 40)) %>%
+  fortify()
+
+```
+
+```{r create Caribbean reef shapefile, eval=FALSE, include=FALSE}
+
+## read in the global coral reef shapefile 
+shape <- shapefile(WCMC008_CoralReef2018_Py_v4_path)
+reefs_cropped <- crop(shape, extent(Xmin, Xmax, Ymin, Ymax)) # crop for the Caribbean region only
+shapefile(reefs_cropped, "data/ReefData/Caribbean_reefs.shp") # save the new Caribbean-specific reef shapefile
+
+```
+
+```{r assign reefs to ecoregions, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+## Read in the reef points csv and clipped Caribbean ecoregion shapefile
+reef_gps <- read.csv("data/ReefData/CaribbeanReef_points.csv") # read in FULL reef locations csv
+ecoreg <- sf::read_sf("data/EcoRegions/Caribbean_ecoregions.shp") # this is used for ecoregion name list (plotting ecoregion bounds)
+ecoregions2 <- readOGR('data/EcoRegions', 'Caribbean_ecoregions') # this is used for assigning ecoregion in the forloop below
+
+
+## Subset Caribbean shapefile for the TNA (The North Atlantic) province (code 12) with Bermuda removed and only the N. GoM within the WTNA province (codes 6)
+carib_ecoreg <- ecoreg %>% 
+  filter(PROV_CODE == 12 & ECOREGION != "Bermuda" | PROV_CODE == 6 & ECOREGION == "Northern Gulf of Mexico") 
+
+# create unique reef id
+reef_points <- reef_gps %>%
+  mutate(reef_id = as.numeric(interaction(lat, lon, drop = TRUE))) %>%
+  filter()
+
+# transform points into SpatialPointsDataFrames and modify projection to be the same
+coordinates(reef_points) <- c("lon", "lat")  
+projection(reef_points) <- proj # change the projection of the reef_points dataframe
+projection(ecoregions2) <- proj # change the projection of the ecoregions2 polygopn dataframe
+
+
+## Assign reef locations to ecoregions (using forloop)
+
+eco_list <- carib_ecoreg$ECOREGION # create a list of the ecoregions (used in the forloop)
+
+# make a blank dataframe to be populated from the forloop
+compiled_eco_df <- data.frame('lat' = integer(),
+                              'lon' = integer(),
+                              'reef_id' = factor(),
+                              'ecoregion' = factor())
+
+## Create a forloop to assign reef loactions to each ecoregion and compile into single dataframe
+for(e in 1:length(eco_list)) {
+  ecoregion_name <- eco_list[[e]] # pull the name of ecoregion
+  subset_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == ecoregion_name, ] # subset for only the desired ecoregion
+  projection(subset_ecoreg) <- proj # modify the lat/lon projection to match reef points
+  ecoregion_reefs <- reef_points[subset_ecoreg, ] # clip the reef points by the ecoregion bounds
+  ecoregion_df <- as.data.frame(ecoregion_reefs) # transform reef points (spatial) to dataframe
+  ecoregion_df$reef_id <- factor(ecoregion_df$reef_id) # make reef ID into a factor
+  ecoregion_df$ecoregion <- rep(ecoregion_name, length(ecoregion_df$reef_id)) # add ecoregion name to the data
+  compiled_eco_df <- rbind(compiled_eco_df, ecoregion_df) # add the most recent layer to the full dataframe
+}
+
+
+# Rename "Northern GoM" and "Northern GoM" to just GoM (these will be considered the same ecoregion from here on)
+compiled_eco_df$ecoregion <- gsub("Northern G", "G", compiled_eco_df$ecoregion)
+compiled_eco_df$ecoregion <- gsub("Southern G", "G", compiled_eco_df$ecoregion)
+
+```
+
+```{r reefs by ecoregion map}
+
+### Plot the map (reefs are coloured by ecoregion with # of reefs beside region name)
+
+## Update ecoregion labels to include number of reefs within each 
+# create dataframe of just ecoregion and n
+lab_df <- compiled_eco_df %>% 
+  group_by(ecoregion) %>% 
+  summarize(n = n())
+
+# create new labels to display 'ECOREGION (n=NUMBER_REEFS)'
+labels <- paste(lab_df$ecoregion, " (n=", lab_df$n, ")", sep = "")
+
+# Name existing ecoregion labels based on new labels for plot 
+eco_labs <- c("Bahamian" = labels[1],
+              "Eastern Caribbean" = labels[2],
+              "Floridian" = labels[3],
+              "Southwestern Caribbean" = labels[7],
+              "Western Caribbean" = labels[8],
+              "Southern Caribbean" = labels[6],
+              "Gulf of Mexico" = labels[5],
+              "Greater Antilles" = labels[4])
+
+
+## set colour palette and read in world shapefile
+world <- ne_countries(scale = "medium", returnclass = "sf") # world shapefile
+pal <- c("#FF948C", "#E48732", "#387560", "#7993CF", "#6E4096", "#5898AF", "#D9B03B", "#B8321D") # colour palette for ecoregions
+pal2 <- c("#FF948C", "#E48732", "#387560", "#7993CF", "#6E4096", "#5898AF", "#6E4096", "#D9B03B", "#B8321D") # ecoregion bounds colours (see note below)
+
+
+## Map plot
+# Note: to display the ecoregion bounds, unhash the two lines to plot the shapefiles over the map
+
+ggplot() + 
+  geom_point(data = compiled_eco_df, aes(x = lon, y = lat, colour = ecoregion), size = 0.7) +
+  geom_sf(data = world) +
+  #geom_sf(data = carib_ecoreg, colour = "black", aes(fill = ECOREGION), alpha = 0.1) + # for showing ecoregion bounds
+  #scale_fill_manual("Ecoregion", values = pal2, labels = eco_labs) + # for showing ecoregion bounds (colours)
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), legend.text=element_text(size=12), legend.title=element_text(size=14), axis.text = element_text(size = 10)) +
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33)) +
+  scale_colour_manual("Ecoregion", values = pal, labels = eco_labs) +
+  ylab("") +
+  xlab("") +
+  ggsave("figures/Manuscript_figs/Fig1_ReefMap_map.pdf", width = 8, height = 3.5)
+
+```
+
+**Caribbean coral reef site locations and ecoregion designation.** The colour of each reef represents the designated ecoregion (Spalding et al. 2010) and n denotes the number of unique reefs within that ecoregion.
+
+<br/>
+
+
+## SST Extraction and Analysis  {.tabset}
+
+### <span style="color: #0072B2;">**Figure 2**</span>
+
+```{r HadISST raster extraction}
+
+## read in the HadISST raster
+had_data <- HadISST_sst_path # this is from the path defined at the start
+data_brick <- brick(had_data) # read SST data as rasterbrick
+data_brick <- crop(data_brick, extent(Xmin, Xmax, Ymin, Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
+
+
+ncdf_file <- nc_open(had_data) # open up the netCDF
+
+nc_lats <- ncdf_file$dim$latitude$vals #other way of looking into the data structure; extracting lats (HadISST)
+nc_longs <- ncdf_file$dim$lon$vals #longs here (HadISST)
+nc_longs[nc_longs>180] <- nc_longs[nc_longs>180]-360 # convert lat/lon
+
+#time handling
+raw_times <- ncdf_file$dim$time$vals #times are seconds after the "start of time"
+startoftime <- substr(ncdf_file$dim$time$units,1,19) #HadISST
+nc_times <- as.POSIXct(gsub("days since ","",startoftime), tz="UTC", format='%Y-%m-%d') + (raw_times*60*60*24) #HadISST
+nc_times <- nc_times+3600*3 #to center readings at noon - just cosmetics
+nc_close(ncdf_file) #close the file
+
+#temporal subsetting  
+start_date <- "1871/01/01"
+end_date <- "2020/12/31"
+start_date <- as.POSIXct(start_date,tz="UTC")
+end_date <- as.POSIXct(end_date,tz="UTC")
+
+##restrict temporally - here we are not restricting temporally so not data is being removed here
+Tstart_index <- min(which(difftime(nc_times,start_date)>0))
+#Tend_index <- min(which(difftime(nc_times,end_date)>0))
+data_brick <- data_brick[[Tstart_index:length(nc_times)]]
+time <- nc_times[Tstart_index:length(nc_times)]
+
+save(time, nc_times, file = "data/HadISST/HadISST_times.Rdata") # save the time variables for IDs for running scripts remotely
+
+
+### subsetting the HadISST raster for 1981 - 2019 timespan for comparison with Pathfinder
+start_dateb <- "1981-08-16" #"1990-01-16" 
+start_dateb <- as.POSIXct(start_dateb, tz="UTC")
+Tstart_indexb <- min(which(difftime(nc_times, start_dateb)>0))
+
+data_brickb <- brick(had_data)
+data_brickb <- crop(data_brickb, extent(Xmin, Xmax, Ymin, Ymax))
+data_brickb <- data_brickb[[Tstart_indexb:length(nc_times)]]
+timeb <- nc_times[Tstart_indexb:length(nc_times)]
+
+```
+
+```{r HadISST lm map df creation}
+
+## simple lm function applied to the full HadISST raster brick
+lm.fun <- function(x, time)
+{
+  if(any(is.na(x))){NA}
+  else{
+    lm(x~time)$coefficients[2]*60*60*24 # slope here is degrees/day
+  }
+}
+raster_slope <- calc(data_brick, function(x)lm.fun(x, time = time))
+
+# convert the raster to a df for plotting
+raster_slope <- raster_slope*(365.25*10) # this is currently C per decade
+had_slope <- as.data.frame(as(raster_slope, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
+colnames(had_slope) <- c("sst", "x", "y")
+
+
+########## Same idea, this time only being used on the 1981 - 2019 subset
+
+# apply the function
+raster_slopeb <- calc(data_brickb, function(x)lm.fun(x, time = timeb))
+
+# convert the raster to a dataframe for plotting
+raster_slope_sub <- raster_slopeb*(365.25*10) # this is currently C per decade
+had_slope_sub <- as.data.frame(as(raster_slope_sub, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
+colnames(had_slope_sub) <- c("sst", "x", "y")
+
+# --------- *Plotting occurs down at the bottom of the markdown file* --------- #
+
+```
+
+```{r HadISST pvalue map df creation}
+
+## function to pull the p value per pixel of the simple lm applied to the full HadISST raster brick 
+pval.fun <- function(x, time)
+{
+  if(any(is.na(x))){NA}
+  else{
+    summary(lm(x ~ time))$coefficients[4] # pulls the p value
+  }
+}
+raster_pval <- calc(data_brick, function(x)pval.fun(x, time = time))
+
+# convert the raster to a df for plotting
+had_pavl <- as.data.frame(as(raster_pval, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
+colnames(had_pavl) <- c("pval", "x", "y")
+had_pavl$bins <- cut(had_pavl$pval, breaks = bins, labels = bin_names) # bins the pvales into 6 unique bins for plotting
+
+
+########## Same idea, this time only being used on the 1981 - 2019 subset
+
+# apply function to pull p value from each grid
+raster_pvalb <- calc(data_brickb, function(x)pval.fun(x, time = timeb))
+
+# convert the raster to a df for plotting
+had_pval_sub <- as.data.frame(as(raster_pvalb, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
+colnames(had_pval_sub) <- c("pval", "x", "y")
+had_pval_sub$bins <- cut(had_pval_sub$pval, breaks = bins, labels = bin_names) # bins the pvales into 6 unique bins for plotting
+
+# --------- *Plotting occurs down at the bottom of the markdown file* --------- #
+
+```
+
+```{r HadISST reef SST extraction, eval=FALSE, include=FALSE}
+
+## read in FULL reef locations csv
+reef_gps <- read.csv("data/ReefData/CaribbeanReef_points.csv")
+
+## convert sampling points to spatial points and applying projection to points
+LongLat <- cbind(reef_gps$lon, reef_gps$lat) 
+ReefPTS <- SpatialPoints(LongLat)
+proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
+projection(ReefPTS) <- proj
+
+## extract data from the sst brick with the sampling points shifted
+had_sst <- raster::extract(data_brick, ReefPTS)
+
+## convert the data matrix to a final dataframe
+had_sst_xts <- xts(t(had_sst), time) # t is used to transpose the matrix because xts assumes dates are along the lines, not columns
+had_sst_df <- data.frame(date=index(t(had_sst_xts)), coredata(t(had_sst_xts))) # convert xts object to dataframe
+had_sst_df$reef <- factor(seq(1, length(had_sst_df$date), 1)) # ID the columns to identify unique reefs
+had_sst_df$date <- NULL # remove this column since it is repetitive 
+had_sst_long <- gather(had_sst_df, date, sst, X1871.01.16.15.00.00:X2020.12.16.15.00.00) # convert from wide to long format
+
+## update the dataframe for saving
+had_gps <- had_sst_long %>% separate(date, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
+had_gps$date <- paste(had_gps$year, had_gps$month, had_gps$day, sep = ".") # creates a full date column (XYear.Month.Day)
+had_gps <- had_gps[, -c(2:7)] # remove columns for hour, minute, and seconds (we won't use these)
+had_gps <- spread(had_gps, reef, sst)
+
+## save the final dataframe (.csv or Rdata)
+#write.csv(had_gps, file = "data/HadISST/HadISST_reefs_SST_update.csv") # to save file as .csv
+save(had_gps, file = "data/HadISST/HadISST_reefs_SST_update.Rdata") # to save file as Rdata (I saved as Rdata since it is large)
+
+```
+
+```{r HadISST monthly reef SST dataframe construction}
+
+load("data/HadISST/HadISST_reefs_SST_update.Rdata")
+
+had_gps <- had_gps # only need to use this to make the UPDATED reef SST dataframe compatible below
+
+## create a new dataframe of simple stats per time
+had_full <- data.frame("date" = had_gps[,1],
+                      "mean_temp" = rowMeans(had_gps[,-1], na.rm = TRUE),
+                      "max_temp" = apply(had_gps[,-1], 1, FUN=max, na.rm = TRUE),
+                      "min_temp" = apply(had_gps[,-1], 1, FUN=min, na.rm = TRUE),
+                      "n" = length(had_gps[,-1]))
+
+had_full <- had_full %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
+had_full$year <- as.numeric(gsub("\\X", "", had_full$year)) # convert the year column to numerics and remove 'X'
+had_full$month2 <- factor(had_full$month) # make a month as a factor column for plotting
+
+```
+
+```{r HadISST monthly SST per year}
+
+#### Data visualization of monthly SST per year #### 
+
+# calculate summary statistic per month across years
+HADI_month_avg <- had_full %>% 
+  group_by(month) %>% 
+  summarize(mean = mean(mean_temp, na.rm = TRUE),
+            sd = sd(mean_temp, na.rm = TRUE),
+            n = n()) %>% 
+  mutate(se = sd / sqrt(n),
+         lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
+         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
+
+# make year integer for better plotting
+had_full$year <- as.integer(had_full$year)
+
+## create plots of monthly HadISST per year
+had_month_plot <- ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1), text = element_text(size = 14)) +
+  theme(legend.position = c(0.065, 0.85), legend.key.size = unit(0.3, "cm"), legend.background = element_rect(fill = NA), plot.title = element_text(size = 12)) + # legend theme
+  guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
+  geom_line(data = had_full, aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
+  scale_colour_gradient2("", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(had_full$year), space="Lab", breaks = seq(1870, 2020, 50)) +
+  #geom_ribbon(data = HADI_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
+  #geom_line(data = HADI_month_avg, aes(x = month, y = mean), colour = "black", group = 1, size = 1.5) +
+  scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
+  ylab('SST (°C)') +
+  ggtitle("HadISST (1871 - 2020)") + 
+  theme(plot.title = element_text(size = 13))
+
+```
+
+```{r HadISST annual SST}
+
+## construct df for the GAM smoothing of mean SST
+had_gam_df <- gather(had_gps, reef, sst, `1`:`5607`)
+had_gam_df$date <- gsub("\\X", "", had_gam_df$date) # convert year to numeric and remove 'X'
+had_gam_df <- had_gam_df %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
+had_gam_df$date <- as.Date(with(had_gam_df, paste(year, month, day, sep="-")), "%Y-%m-%d")
+
+
+#### Data visualization per year across months #### 
+
+# calculate summary statistic per month across years
+HADI_year_avg <- had_full %>% 
+  group_by(year) %>% 
+  summarize(mean = mean(mean_temp, na.rm = TRUE),
+            max = max(mean_temp, na.rm = TRUE),
+            min = min(mean_temp, na.rm = TRUE),
+            sd = sd(mean_temp, na.rm = TRUE),
+            n = n()) %>% 
+  mutate(se = sd / sqrt(n),
+         lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
+         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se,
+         range = max - min)
+
+
+## plot with smoothed trend
+had_year_plot <- ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14)) +
+  geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "grey", linetype = 2) +
+  geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
+  #geom_line(data = HADI_year_avg, aes(x = year, y = mean), colour = "black", group = 1, size = 1, alpha = 0.7) + # mean sst
+  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020)) +
+  ylab('SST (°C)') +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
+  geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) + # max sst
+  geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + # min sst
+  geom_smooth(data = had_gam_df, method = "gam", aes(x = year, y = sst), colour = "black", group = 1, size = 1, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp over all data
+  coord_cartesian(xlim = c(1870, 2020)) 
+
+```
+
+```{r HadISST combined figure, fig.align='center', fig.width=6, fig.height=7.5}
+
+# Saves the manuscript version of the HadISST historic SST
+plot_grid(had_month_plot, had_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
+  ggsave("figures/Manuscript_figs/Fig2_SST_trends.pdf", width = 6, height = 7.5)
+
+```
+
+**Historic SST trend on Caribbean coral reefs (1871–2020).** Long-term SST records (HadISST) on Caribbean coral reefs depicting **A**) mean monthly SST each year (represented by line colour: blue to red) and **B**) GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the overall mean SST for all sites over the entire period (27.3 °C) and the grey ribbon represents the 95% confidence interval around the true annual SST mean through time.
+
+<br/>
+
+
+### <span style="color: #0072B2;">**Figure 3**</span>
+
+```{r HadISST ecoregion SST extraction - REMOTE, eval=FALSE, include=FALSE}
+
+# ***NOTE***
+####--- this portion of the script was run on a high performance computing cluster because of the long runtime 
+####--- see separate R script (SSTExtraction_ReefGPS.R) for instructions (located in the code folder)
+####--- the script can be put on a cluster with the HadISST netCDF (HadISST_sst.nc) to run
+
+
+##########################################
+
+### Extract SST using the ecoregion classifications and reef points
+
+## Create an empty dataframe to populate while running the forloop with the following parameters:
+eco_df <- data.frame('date' = integer(),
+                     'sst' = integer(),
+                     'ecoregion' = factor())
+
+eco_sst_df <- data.frame('date' = integer(),
+                         'sst' = integer(),
+                         'ecoregion' = factor())
+
+
+#### Run the forloop in parallel (if able):
+
+## Read in the HadISST netCDF and clip based on Caribbean bounds
+data_brick <- brick(had_data) # read SST data as rasterbrick
+raster_brick <- crop(data_brick, extent(Xmin, Xmax, Ymin, Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
+layers <- raster_brick@data@nlayers
+
+for(e in 1:length(eco_list)) {
+ 
+  ## First, select reefs within specific ecoregion 
+  ecoregion_name <- eco_list[[e]] # pull the name of ecoregion
+  subset_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == ecoregion_name, ] # subset for only the desired ecoregion
+  projection(subset_ecoreg) <- proj # modify the lat/lon projection to match reef points
+  ecoregion_reefs <- reef_points[subset_ecoreg, ] # clip the reef points by the ecoregion bounds
+  
+  output <- foreach(i = 1:layers, .combine = "rbind", .packages = c("raster", "rgdal", "sf", "ncdf4", "tidyverse")) %dopar% {
+    
+    ## Read in the netCDF and clip based on Caribbean bounds
+    data_brick <- brick("data/HadISST/HadISST_sst.nc") # read SST data as rasterbrick
+    raster_brick <- crop(data_brick, extent(Xmin, Xmax, Ymin, Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
+    
+    ## Then, extract SST from reef locations wihtin the current ecoregion and append to dataframe
+    raster <- raster_brick[[i]] # select the layer of the rasterbrick 
+    sst_vals <- raster::extract(raster, ecoregion_reefs) # extract SST at lat/lon of each reef
+    # create dataframe of current layer (date) and extracted SST
+    df <- data.frame('date' = raster@data@names,
+                     'sst' = sst_vals)
+    df$ecoregion <- rep(ecoregion_name, length(df$date)) # add a ecoregion name column
+    eco_df <- rbind(eco_df, df) # adds current layer SST data to the full dataframe
+    
+    return(eco_df)
+  }
+  eco_sst_df <- rbind(eco_sst_df, output)
+}
+
+
+
+## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
+# *** Only uncomment these lines if you want to write over existing files ***
+#save(eco_sst_df, file = "data/HadISST/Ecoregion_SST/HadISST_ecoregion_sst.Rdata")
+#write.csv(eco_sst_df, file = "data/HadISST/Ecoregion_SST/HadISST_ecoregion_sst", row.names=FALSE)
+
+```
+
+```{r HadISST ecoregion monthly SST dataframe construction}
+
+## Load the ecoregion extracted SST data (here using Rdata, but you can use csv if smaller)
+load("data/HadISST/HadISST_ecoregion_sst.Rdata")
+
+# Rename "Northern GoM" and "Northern GoM" to just GoM (these will be considered the same ecoregion from here on)
+eco_sst_df$ecoregion <- gsub("Northern G", "G", eco_sst_df$ecoregion)
+eco_sst_df$ecoregion <- gsub("Southern G", "G", eco_sst_df$ecoregion)
+
+ecoregion_sst <- eco_sst_df %>% 
+  group_by(ecoregion, date) %>% 
+  summarize(mean_sst = mean(sst, na.rm = TRUE),
+            max = max(sst, na.rm = TRUE),
+            min = min(sst, na.rm = TRUE),
+            n = n())
+
+
+ecoregion_sst <- ecoregion_sst %>% separate(date, c("year", "month", "day"), convert = TRUE) # create year, month, and day column columns
+ecoregion_sst$year <- as.numeric(gsub("\\X", "", ecoregion_sst$year)) # convert the year column to numerics and remove 'X'
+ecoregion_sst$month2 <- factor(ecoregion_sst$month) # make a month as a factor column for plotting  
+
+```
+
+```{r HadISST ecoregion monthly SST per year, eval=FALSE, fig.align='center', fig.height=10, fig.width=9, include=FALSE}
+
+#### Data visualization of monthly SST per year #### 
+
+## create plots of monthly HadISST per year
+# markdown plot
+ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 70, hjust = 1)) +
+  geom_line(data = ecoregion_sst, aes(x = month, y = mean_sst, group = year, colour = year), alpha = 0.6, size = 0.2) +
+  scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(ecoregion_sst$year), space="Lab") +
+  scale_x_continuous(name = "", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
+  scale_y_continuous(breaks = seq(20, 32, 2)) +
+  ylab('SST (°C)') +
+  facet_wrap(~ecoregion, ncol = 2) +
+  guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black"))
+
+```
+
+```{r HadISST ecoregion annual SST, fig.height=9, fig.width=9}
+
+## Calculate summary statistic per month across years
+ecoregion_sst_annual <- ecoregion_sst %>% 
+  group_by(ecoregion, year) %>% 
+  summarize(mean = mean(mean_sst, na.rm = TRUE),
+            max = max(mean_sst, na.rm = TRUE),
+            min = min(mean_sst, na.rm = TRUE),
+            range = max - min,
+            sd = sd(mean_sst, na.rm = TRUE),
+            n = n()) %>% 
+  mutate(se = sd / sqrt(n),
+         lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
+         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
+
+## Create overall mean SST per ecoregion for plotting dashed line
+ecoregion_year_mean <- ecoregion_sst %>% 
+  group_by(ecoregion) %>% 
+  summarize(mean = round(mean(mean_sst, na.rm = TRUE), 2),
+            range = round(mean((max(mean_sst, na.rm = TRUE) - min(mean_sst, na.rm = TRUE)), na.rm = TRUE), 2))
+
+ecoregion_year_mean$lab <- paste(LETTERS[1:8])
+
+#### Data visualization per year across months #### 
+
+## Plot with smoothed trend
+ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 30, hjust = 0.8), text = element_text(size = 14)) +
+  geom_segment(data = ecoregion_year_mean, aes(y = mean, yend = mean, x = 1870, xend = 2020), colour = "grey", linetype = 2) +
+  geom_ribbon(data = ecoregion_sst_annual, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
+  scale_x_continuous(name = "", breaks = seq(1880, 2020, 20)) +
+  ylab('SST (°C)') +
+  geom_line(data = ecoregion_sst_annual, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
+  geom_line(data = ecoregion_sst_annual, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
+  geom_smooth(data = ecoregion_sst_annual, method = "gam", aes(x = year, y = mean), colour = "black", group = 1, size = 0.5, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp
+  coord_cartesian(xlim = c(1870, 2020)) +
+  scale_y_continuous(breaks = seq(20, 32, 2), limits = c(20, 32)) +
+  facet_wrap(~ ecoregion, ncol = 2, scales = "free_y") +
+  geom_text(data = ecoregion_year_mean, aes(x = -Inf, y = Inf, label = lab, group = ecoregion), fontface = "bold", size = 4.5, hjust = -0.5, vjust = 1.4) +
+  ggsave("figures/Manuscript_figs/Fig3_Ecoregion_SST_trends.pdf", width = 7, height = 8)
+
+```
+
+**Historic SST trends on coral reefs within ecoregions (1871–2019).** Long-term SST records (HadISST) on Caribbean coral reefs separated by ecoregion depicting GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the mean SST over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean for each ecoregion.
+
+<br/>
+
+
+### Figure S2
+
+```{r Pathfinder raster and times}
+
+## read in the Pathfinder raster
+path_data <- pathfinder_combined_monthly_data_path
+data_brick2 <- brick(path_data) # read SST data as rasterbrick
+data_brick2 <- crop(data_brick2,extent(Xmin,Xmax,Ymin,Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
+
+
+ncdf_file <- nc_open(path_data)
+#ncdf_file
+
+nc_lats <- ncdf_file$dim$lat$vals #other way of looking into the data structure; extracting lats
+nc_longs <- ncdf_file$dim$lon$vals #longs here
+nc_longs[nc_longs>180] <- nc_longs[nc_longs>180]-360
+
+#time handling
+raw_times <- ncdf_file$dim$time$vals # times are seconds after the "start of time"
+startoftime <- ncdf_file$dim$time$units # here's what they consider the start of time
+nc_times<-as.POSIXct(raw_times, tz="UTC", gsub("seconds since ","", startoftime))
+nc_times <- nc_times+3600*3 # to center readings at noon - just cosmetics
+nc_close(ncdf_file) # close the file
+
+# temporal subsetting  
+start_date2 <- "1981-09-15"
+end_date2 <- "2019-12-16"
+#end_date2 <- "1982-08-16" # using this one for just a subset of 12 months
+start_date2 <- as.POSIXct(start_date2, tz="UTC")
+end_date2 <- as.POSIXct(end_date2, tz="UTC")
+    
+# restrict temporally
+Tstart_index2 <- min(which(difftime(nc_times,start_date2)>0))
+Tend_index2 <- min(which(difftime(nc_times,end_date2)>0))
+data_brick2 <- data_brick2[[Tstart_index2:Tend_index2]]
+time <- nc_times[Tstart_index2:Tend_index2]
+
+# save time component
+save(time, nc_times, file = "data/Pathfinder/Pathfinder_times.Rdata")# save the time variables for IDs for running scripts remotely
+
+```
+
+```{r Pathfinder raster edit and slope calculation - REMOTE, eval=FALSE, include=FALSE}
+
+# ***NOTE***
+####--- this portion of the script was run on a high performance computing cluster because of the long runtime 
+####--- see separate R script (Pathfinder_RasterCalculations.R) for instructions (located in the code folder)
+####--- the script can be put on a cluster with the Pathfinder netCDF (pathfinder_combined_monthly_data.nc) to run
+
+
+##########################################
+
+## Remove NAs and convert to C
+KtoC <- function(x){round(x-273.15,2)} # converts the raster from Kelvin to Celsius
+NAset <- function(x){x[x < -54]<-NA; return(x)} # Pathfinder uses the value -54 (K) to denote missing data and this function replaces that with NA
+data_brick2 <- calc(data_brick2, NAset) # apply the NA function written above to raster
+data_brick2b <- calc(data_brick2, KtoC) # apply the Kelvin function written above to raster
+
+
+## Calculate slope of temperature change across time for each pixel
+# simple lm function applied to the raster brick to calculate the slope of temperature change over timescale of raster
+lm.fun2 <- function(x, time){
+  if(is.na(x)){NA} # this removes any NA values from the slope calculations 
+  else{
+    lm(x~time)$coefficients[2]*60*60*24 # slope here is degrees/day
+  }}
+
+raster_slope2 <- calc(data_brick2, function(x)lm.fun2(x, time = time)) # function applied here
+
+
+## Create dataframe from calculated slope raster in C per decade for plotting
+raster_slope2 <- raster_slope2*(365.25*10) # this is currently C per decade
+path_slope <- as.data.frame(as(raster_slope2, "SpatialPixelsDataFrame")) # convert to a raster to da$
+colnames(path_slope) <- c("sst", "x", "y")
+
+
+## Save the edited netCDF file and the slope raster/dataframe
+## Only uncomment these lines if you want to write over existing files!! 
+
+#writeRaster(data_brick2b, filename = "data/Pathfinder/Pathfinder_monthly_edit.nc", format="CDF", overwrite=FALSE)
+#save(path_slope, file = "data/Pathfinder/Pathfinder_slope.Rdata")
+#write.csv(path_slope, file = "data/Pathfinder/Pathfinder_slope.csv", row.names=FALSE)
+
+# --------- *Plotting occurs down at the bottom of the markdown file* --------- #
+
+```
+
+```{r Pathfinder pvalue map df creation - REMOTE, eval=FALSE, include=FALSE}
+
+# ***NOTE***
+####--- This does take a while (~10 minutes), however it can be run locally.
+####--- see separate R script (Pathfinder_RasterCalculations.R) for instructions (located in the code folder)
+####--- the script can be put on a cluster with the Pathfinder netCDF (pathfinder_combined_monthly_data.nc) to run
+
+
+##########################################
+
+## load in the edited pathfinder raster
+path_brick <- brick(Pathfinder_monthly_edit_path)
+
+## function to pull the p value per pixel of the simple lm applied to the full HadISST raster brick 
+pval.fun <- function(x, time)
+{
+  if(any(is.na(x))){NA}
+  else{
+    summary(lm(x ~ time))$coefficients[4] # pulls the p value
+  }
+}
+raster_pval <- calc(data_brick, function(x)pval.fun(x, time = time))
+
+## function to pull the p value per pixel of the simple lm applied to the full Pathfinder raster brick 
+raster_pval2 <- calc(path_brick, function(x)pval.fun(x, time = time))
+
+# convert the raster to a df for plotting
+path_pavl <- as.data.frame(as(raster_pval2, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
+colnames(path_pavl) <- c("pval", "x", "y")
+path_pavl$bins <- cut(path_pavl$pval, breaks = bins, labels = bin_names) # bins the pvales into 6 unique bins for plotting
+
+## save the dataframe to save time
+write.csv(path_pavl, file = "data/Pathfinder/Pathfinder_pval.csv", row.names=FALSE)
+
+# --------- *Plotting occurs down at the bottom of the markdown file* --------- #
+
+```
+
+```{r Pathfinder GPS extraction, eval=FALSE, include=FALSE}
+
+# This takes a while to run, however, it was run locally.
+
+load("data/Pathfinder/Pathfinder_times.Rdata")
+
+## read in the Pathfinder raster
+path_data <- "data/Pathfinder/PathfinderSST_monthly_edit.nc"
+data_brick2 <- brick(path_data) # read SST data as rasterbrick
+data_brick2 <- crop(data_brick2,extent(Xmin,Xmax,Ymin,Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
+
+reef_gps <- read.csv("data/ReefData/CaribbeanReef_points.csv") # read in FULL reef locations csv
+
+## convert sampling points to spatial points and applying projection to points
+LongLat <- cbind(reef_gps$lon, reef_gps$lat) 
+ReefPTS <- SpatialPoints(LongLat)
+proj <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
+projection(ReefPTS) <- proj
+
+
+## extract data from the sst brick with the sampling points shifted
+path_sst <- raster::extract(data_brick2, ReefPTS)   # path_sst <- raster::extract(data_brick2, ReefPTS_shifted)
+
+
+## convert the data matrix to a final dataframe
+path_sst_xts <- xts(t(path_sst), time) # t is used to transpose the matrix because xts assumes dates are along the lines, not columns
+path_sst_df <- data.frame(date=index(t(path_sst_xts)), coredata(t(path_sst_xts))) # convert xts object to dataframe
+path_sst_df$reef <- factor(seq(1, length(path_sst_df$date), 1)) # ID the columns to identify unique reefs
+path_sst_df$date <- NULL # remove this column since it is repetitive 
+path_sst_long <- gather(path_sst_df, date, sst, X1981.09.15.17.34.40:X2019.12.16.11.45.55) # convert from wide to long format
+
+## update the dataframe for saving
+path_gps <- path_sst_long %>% separate(date, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
+path_gps$date <- paste(path_gps$year, path_gps$month, path_gps$day, sep = ".") # creates a full date column (XYear.Month.Day)
+path_gps <- path_gps[, -c(2:7)] # remove columns for hour, minute, and seconds (we won't use these)
+path_gps <- spread(path_gps, reef, sst)
+
+## save the final dataframe (.csv or Rdata)
+#write.csv(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update.csv") # to save file as .csv
+saveRDS(path_gps, file = "data/Pathfinder/Pathfinder_reefs_SST_update.rds") # to save file as Rdata (I saved as Rdata since it is large)
+
+```
+
+```{r Pathfinder monthly SST dataframe construction}
+
+path_gps <- readRDS("data/Pathfinder/Pathfinder_reefs_SST.rds")
+
+## create a new dataframe of simple stats per time
+path_full <- data.frame("date" = path_gps[,1],
+                        "mean_temp" = rowMeans(path_gps[,-1], na.rm = TRUE),
+                        "max_temp" = apply(path_gps[,-1], 1, FUN=max, na.rm = TRUE),
+                        "min_temp" = apply(path_gps[,-1], 1, FUN=min, na.rm = TRUE),
+                        "n" = length(path_gps[,-1]))
+
+path_full <- path_full %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
+path_full$year <- as.numeric(gsub("\\X", "", path_full$year)) # convert the year column to numerics and remove 'X'
+path_full$month2 <- factor(path_full$month) # make a month as a factor column for plotting
+
+```
+
+```{r Pathfinder monthly SST per year, fig.align='center'}
+
+#### Data visualization of monthly SST per year #### 
+
+# calculate summary statistic per month across years
+Path_month_avg <- path_full %>% 
+  group_by(month) %>% 
+  summarize(mean = mean(mean_temp, na.rm = TRUE),
+            sd = sd(mean_temp, na.rm = TRUE),
+            n = n()) %>% 
+  mutate(se = sd / sqrt(n),
+         lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
+         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se)
+
+# make year integer for better plotting
+path_full$year <- as.integer(path_full$year)
+
+## create plots of monthly Pathfinder per year
+# markdown plot
+path_month_plot <- ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1), text = element_text(size = 14)) +
+  theme(legend.position = c(0.065, 0.85), legend.key.size = unit(0.3, "cm"), legend.background = element_rect(fill = NA), plot.title = element_text(size = 12)) + # legend theme
+  guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
+  geom_line(data = path_full, aes(x = month, y = mean_temp, group = year, colour = year), alpha = 0.6, size = 0.4) +
+  scale_colour_gradient2("", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(path_full$year), space="Lab") +
+  scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
+  ylab('SST (°C)') +
+  ggtitle("Pathfinder (1981 - 2019)") + 
+  theme(plot.title = element_text(size = 13))
+
+```
+  
+```{r Pathfinder annual SST}
+
+## construct df for the GAM smoothing of mean SST
+path_gam_df <- gather(path_gps, reef, sst, `1`:`5607`)
+path_gam_df$date <- gsub("\\X", "", path_gam_df$date) # convert year to numeric and remove 'X'
+path_gam_df <- path_gam_df %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
+path_gam_df <- subset(path_gam_df, year != "2020") # exclude 2020 data
+
+
+#### Data visualization per year across months #### 
+
+# calculate summary statistic per month across years
+Path_year_avg <- path_full %>% 
+  group_by(year) %>% 
+  summarize(mean = mean(mean_temp, na.rm = TRUE),
+            max = max(mean_temp, na.rm = TRUE),
+            min = min(mean_temp, na.rm = TRUE),
+            sd = sd(mean_temp, na.rm = TRUE),
+            n = n()) %>% 
+  mutate(se = sd / sqrt(n),
+         lowerci = mean - qt(1 - (0.05 / 2), n - 1) * se,
+         upperci = mean + qt(1 - (0.05 / 2), n - 1) * se,
+         range = max - min)
+
+
+## plot with smoothed trend
+path_year_plot <- ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14)) +
+  #geom_vline(xintercept = 1981, colour = "lightgrey") +
+  geom_hline(yintercept = mean(Path_year_avg[-1,]$mean), colour = "grey", linetype = 2) +
+  geom_ribbon(data = Path_year_avg[-1,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
+  #geom_line(data = Path_year_avg[-1,], aes(x = year, y = mean), colour = "black", group = 1, size = 1, alpha = 0.7) + # mean sst
+  scale_x_continuous(name = "Year") +
+  ylab('SST (°C)') +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) + # max sst
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + # min sst
+  geom_smooth(data = path_gam_df, method = "gam", aes(x = year, y = sst), colour = "black", group = 1, size = 1, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp over all data
+  coord_cartesian(xlim = c(1981, 2019))
+
+```
+
+```{r Pathfinder combined figure, fig.align='center', fig.width=6, fig.height=7.5}
+
+# Saves the manuscript version of the Pathfinder historic SST
+plot_grid(path_month_plot, path_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
+  ggsave("figures/Supplemental_figs/FigS2_Pathfinder_SST_trends.pdf", width = 6, height = 7.5)
+
+```
+
+Historic SST records (1981-2019; Pathfinder) on Caribbean coral reefs depicting **A**) mean monthly SST each year (represented by line colour: blue to red) and **B**) GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the overall mean SST for all sites over the entire period (27.23 °C) and the grey ribbon represents the 95% confidence interval around the true annual SST mean through time. 
+
+<br/>
+
+
+### Figure S3
+
+```{r combined annual SST plot}
+
+## plot with smoothed trend
+combo_plot <- ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
+  # add the HadISST dataset
+  geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "darkgrey", linetype = 2) +
+  geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.05, linetype = 1) + 
+  geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5, alpha = 0.3) +
+  geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5, alpha = 0.3) + 
+  geom_line(data = HADI_year_avg, aes(x = year, y = mean), colour = "darkgrey", group = 1, size = 0.5, alpha = 0.3) + 
+  geom_smooth(data = HADI_year_avg, method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "darkgrey", group = 1, size = 1, se = FALSE, alpha = 0.3) +
+  # add the Pathfinder dataset on top
+  geom_hline(yintercept = mean(Path_year_avg[-1,]$mean), colour = "black", linetype = 2) +
+  geom_ribbon(data = Path_year_avg[-1,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) +
+  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020)) +
+  ylab('SST (°C)') +
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = mean), colour = "black", group = 1, size = 0.5) + 
+  geom_smooth(data = Path_year_avg[-1,], method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "black", group = 1, size = 1, se = FALSE) +
+  ggtitle("Caribbean coral reefs historic SST trends") +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
+  coord_cartesian(xlim = c(1870, 2020)) +
+  ggsave("figures/Supplemental_figs/FigS3_Both_SST_trends.pdf", width = 6, height = 4)
+
+ggplotly(combo_plot)
+
+```
+
+Comparison of HadISST (1871-2020) and Pathfinder (1981-2019) SST recorded on Caribbean coral reef locations. The high-resolution Pathfinder is represented as darker data over the long-term HadISST. Both datasets are represented by GAM smoothed annual mean SST time (solid line), annual maximum (red line), and annual minimum (blue line) SST. The dashed horizontal line denotes the overall mean SST for all sites over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean through time. 
+
+<br/>
+
+
+### Figure S4
+*Still need to update this figure*
+
+<br/>
+
+
+### HadISST GIF
+
+```{r HadISST GIF, fig.align='center'}
+
+## create version of the plot for creating a GIF of HadISST data
+had_plot_gif <- ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 45, hjust = 1), text = element_text(size = 20)) +
+  guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
+  geom_line(data = had_full, aes(x = month, y = mean_temp, group = year, colour = year), size = 1) +
+  scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(had_full$year), space="Lab") +
+  #geom_ribbon(data = HADI_month_avg, aes(x = month, ymin = lowerci, ymax = upperci), colour = "black", alpha = 0.6, linetype = 2) + 
+  #geom_line(data = HADI_month_avg, aes(x = month, y = mean), colour = "black", group = 1, size = 1.5) +
+  scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
+  ylab('SST (°C)')
+
+## below is code to transform the HadISST monthly SST plot into a GIF (not shown in the Rmarkdown file, but saved in the figures folder)
+# SST is plotted one year at a time in order in the GIF
+
+had_gif <- had_plot_gif + 
+  transition_time(year) +
+  labs(title = "Year: {frame_time} (HadISST)") +
+  shadow_mark(alpha = 0.1, size = 0.5)
+
+animate(had_gif, fps = 10, nframes = 300, end_pause = 2, width = 650, height = 400)
+anim_save("figures/Supplemental_figs/HadISST.gif")
+
+```
+
+
+Long-term SST records (HadISST) on Caribbean coral reefs depicting mean monthly SST each year (represented by line colour: blue to red).
+
+<br/>
+
+
+## Caribbean Basin Maps and Marine Heatwaves {.tabset}
+
+### <span style="color: #0072B2;">**Figure 4**</span>
+
+```{r Pathfinder SST slope map}
+
+### Pathfinder SST slope map
+
+## Clip Pathfinder slopes by MHW bounds
+load("data/Pathfinder/Pathfinder_slope.Rdata") # load Rdata of the modified Pathfinder raster
+path_slope <- path_slope[c(2,3,1)] # just reordering the dataframe
+coordinates(path_slope) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(path_slope) <- proj # modify projection to match Pathfinder
+path_clipped <- path_slope[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+path_slope_clipped <- as.data.frame(path_clipped) # convert to dataframe
+
+## Plot Pathfinder slope map
+path_map <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(data = path_slope_clipped, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = FALSE) + 
+  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(-0.3, 0.4)) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  theme(panel.background = element_rect(fill = "grey95")) +
+  labs(x = "", y = "") +
+  ggtitle(paste0("Caribbean warming rate (1981-2019)"))
+
+# save a version for the markdown visual
+path_map_markdown <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  geom_raster(data = path_slope_clipped, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = FALSE) + 
+  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(-0.3, 0.4)) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  theme(panel.background = element_rect(fill = "grey95")) +
+  labs(x = "", y = "") +
+  ggtitle(paste0("Caribbean warming rate (1981-2019)"))
+
+
+
+## Clip Pathfinder pvalues by MHW bounds
+path_pavl <- read.csv("data/Pathfinder/Pathfinder_pval.csv", header = TRUE) # read in the saved .csv of the dataframe
+path_pavl <- path_pavl[c(2,3,1, 4)] # just reordering the dataframe
+coordinates(path_pavl) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(path_pavl) <- proj # modify projection to match Pathfinder
+pathP_clipped <- path_pavl[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+pathP_slope_clipped <- as.data.frame(pathP_clipped) # convert to dataframe
+
+## Plot Pathfinder significance map
+path_pval_map <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(data = pathP_slope_clipped, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = FALSE) + 
+  scale_fill_manual("p-value", values = "#045a8d") +
+  #scale_fill_brewer("p-value", palette = "PuBu", direction = 1) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  theme(panel.background = element_rect(fill = "grey95")) +
+  labs(x = "", y = "") +
+  ggtitle("Significance of Caribbean warming (1981-2019)")
+
+# save a version for the markdown visual
+path_pval_markdown <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  geom_raster(data = pathP_slope_clipped, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = FALSE) + 
+  scale_fill_manual("p-value", values = "#045a8d") +
+  #scale_fill_brewer("p-value", palette = "PuBu", direction = 1) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  theme(panel.background = element_rect(fill = "grey95")) +
+  labs(x = "", y = "") +
+  ggtitle("SST warming (1981-2019)")
+
+```
+
+```{r OISST MHW frequency map}
+
+### MHW slope map
+MHW_trends <- read_rds(MHW_path) # load in trend data
+MHW_trends$lon <- MHW_trends$lon- 360 # convert lon back into -180 to 180
+
+# add a second pval column- for the breaks used in the map_p plot below
+MHW_trends <- MHW_trends %>% 
+  mutate(pvalb = cut(p, breaks = c(0, 0.001, 0.01, 0.05, .10, .50, 1)))
+
+
+## MHW slopes map
+map_slope <- ggplot(MHW_trends, aes(x = lon, y = lat)) + 
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  #geom_rect(size = 0.2, fill = NA, aes(xmin = lon - 0.1, xmax = lon + 0.1, ymin = lat - 0.1, ymax = lat + 0.1, colour = pval)) +
+  geom_raster(aes(fill = slope), interpolate = FALSE, alpha = 0.9) +
+  scale_fill_distiller("MHW per year", palette = "RdYlBu", limits = c((min(MHW_trends$slope)-0.04), max(MHW_trends$slope))) +
+  #scale_color_brewer("MHW per year", palette = "RdYlBu", name = "p-value", guide = FALSE) +
+  geom_polygon(data = map_base, aes(group = group), colour = "#575757", fill = "grey81") +
+  theme(panel.background = element_rect(fill = "grey95")) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  labs(x = "", y = "") +
+  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
+  ggtitle("Change in marine heat wave frequency (1981-2018)")
+
+# markdown version of above
+mhw_map_markdown <- ggplot(MHW_trends, aes(x = lon, y = lat)) + 
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  #geom_rect(size = 0.2, fill = NA, aes(xmin = lon - 0.1, xmax = lon + 0.1, ymin = lat - 0.1, ymax = lat + 0.1, colour = pval)) +
+  geom_raster(aes(fill = slope), interpolate = FALSE, alpha = 0.9) +
+  scale_fill_distiller("MHW per year", palette = "RdYlBu", limits = c((min(MHW_trends$slope)-0.04), max(MHW_trends$slope))) +
+  #scale_color_brewer("MHW per year", palette = "RdYlBu", name = "p-value", guide = FALSE) +
+  geom_polygon(data = map_base, aes(group = group), colour = "#575757", fill = "grey81") +
+  theme(panel.background = element_rect(fill = "grey95")) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  labs(x = "", y = "") +
+  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
+  ggtitle("Change in MHW frequency (1981-2018)")
+
+
+
+## MHW significance map
+map_p <- ggplot(MHW_trends, aes(x = lon, y = lat)) + 
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(aes(fill = pvalb), interpolate = FALSE) +
+  scale_fill_brewer("p-value", palette = "PuBu", direction = -1, breaks = c("(0,0.001]", "(0.001,0.01]", "(0.01,0.05]", "(0.05,0.1]", "(0.1,0.5]", "(0.5,1]")) +
+  geom_polygon(data = map_base, aes(group = group), colour = "#575757", fill = "grey81") +
+  theme(panel.background = element_rect(fill = "grey95")) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  labs(x = "", y = "") +
+  ggtitle("Significance of change in heat wave frequency (1981-2018)")
+
+# markdown version of above
+mhw_pval_markdown <- ggplot(MHW_trends, aes(x = lon, y = lat)) + 
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
+  geom_raster(aes(fill = pvalb), interpolate = FALSE) +
+  scale_fill_brewer("p-value", palette = "PuBu", direction = -1, breaks = c("(0,0.001]", "(0.001,0.01]", "(0.01,0.05]", "(0.05,0.1]", "(0.1,0.5]", "(0.5,1]")) +
+  geom_polygon(data = map_base, aes(group = group), colour = "#575757", fill = "grey81") +
+  theme(panel.background = element_rect(fill = "grey95")) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  labs(x = "", y = "") +
+  ggtitle("Change in MHW frequency (1981-2018)")
+
+```
+
+```{r combined SST and MHW maps}
+
+### Combined plots
+Figure4 <- cowplot::plot_grid(path_map, map_slope, labels = c("A", "B"), label_size = 18) +
+  ggsave("figures/Manuscript_figs/Fig4_SST_MHW_map.pdf", width = 14.5, height = 5)
+
+# markdown version
+cowplot::plot_grid(path_map_markdown, mhw_map_markdown, labels = c("A", "B"))
+
+```
+
+**Warming patterns throughout the Caribbean Sea.** Increasing warming events across the Caribbean depicted through **A**) rate of SST change (°C per decade) from 1981 to 2019 (Pathfinder; mean slope `r round(mean(path_slope_clipped$sst), 2)` ± `r round(sd(path_slope_clipped$sst), 3)` °C per decade) and **B**) increasing marine heatwave events (slope of counts per year). Grey ocean area was not included in these analyses.
+
+---
+
+<br/>
+
+
+### <span style="color: #0072B2;">**Figure 5**</span>
+*Need to add MHW metrics here*
+
+---
+
+<br/>
+
+
+### Figure S5
+
+```{r combined SST and MHW p value maps}
+
+## Combined p values:
+FigureS5 <- cowplot::plot_grid(path_pval_map, map_p, align = "hv", labels = c("A", "B")) +
+  ggsave("figures/Supplemental_figs/FigS5_SST_MHW_significance_map.pdf", width = 14.5, height = 5)
+
+# markdown version of plot
+cowplot::plot_grid(path_pval_markdown, mhw_pval_markdown, align = "hv", labels = c("A", "B")) 
+
+```
+
+Significance of **A**) rate of SST change (°C per decade) and **B**) number of marine heatwave events per year across the Caribbean depicted in **Figure 4**. Grey ocean area was not included in these analyses.
+
+---
+
+<br/>
+
+
+### Figure S6
+
+```{r HadISST full SST map, message=FALSE, warning=FALSE}
+
+## Clip HadISST slopes by MHW bounds
+had_slope_b <- had_slope[c(2,3,1)] # just reordering the dataframe
+coordinates(had_slope_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(had_slope_b) <- proj # modify projection to match Pathfinder
+had_clipped <- had_slope_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+had_slope_clipped <- as.data.frame(had_clipped) # convert to dataframe
+
+## Plot the map
+had_map <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(data = had_slope_clipped, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = FALSE) + 
+  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(min(had_slope_clipped$sst), max(had_slope_clipped$sst))) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  labs(x = "", y = "") +
+  theme(panel.background = element_rect(fill = "grey95")) +  
+  ggtitle(paste0("Caribbean warming rate (", format.Date(start_date, "%Y"), "-", format.Date(end_date, "%Y"), ")"))
+
+
+```
+
+```{r HadISST full SST pval map, message=FALSE, warning=FALSE}
+
+## Clip Pathfinder slopes by MHW bounds
+had_pavl_b <- had_pavl[c(2,3,1, 4)] # just reordering the dataframe
+coordinates(had_pavl_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(had_pavl_b) <- proj # modify projection to match Pathfinder
+had_p_clipped <- had_pavl_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+had_pavl_clipped <- as.data.frame(had_p_clipped) # convert to dataframe
+
+
+## Plot the map
+had_pval_map <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(data = had_pavl_clipped, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = FALSE) +
+  scale_fill_manual("p-value", values = "#045a8d") +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  labs(x = "", y = "") +
+  theme(panel.background = element_rect(fill = "grey95")) +  
+  ggtitle("SST slope significance")
+
+```
+
+```{r HadISST full SST map combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
+
+plot_grid(had_map, had_pval_map, labels = c("A", "B")) +
+  ggsave("figures/Supplemental_figs/FigS6_HadISST_map.pdf", width = 14, height = 5)
+
+```
+
+**A**) Rate of SST change (°C per decade) over the duration of the HadISST database across the Caribbean from 1871 to 2020 (mean slope `r round(mean(had_slope_clipped$sst), 2)` ± `r round(sd(had_slope_clipped$sst), 3)` °C per decade) and **B**) significance of rate of SST change. Grey ocean area was not included in these analyses.
+
+---
+
+<br/>
+
+
+### Figure S7
+
+```{r HadISST SST map subset (1981-2019), message=FALSE, warning=FALSE}
+
+## Clip HadISST slopes by MHW bounds
+had_slope_sub_b <- had_slope_sub[c(2,3,1)] # just reordering the dataframe
+coordinates(had_slope_sub_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(had_slope_sub_b) <- proj # modify projection to match Pathfinder
+had_s_slope_clipped <- had_slope_sub_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+had_slope_sub_clipped <- as.data.frame(had_s_slope_clipped) # convert to dataframe
+
+## Plot the map
+had_map_sub <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(data = had_slope_sub_clipped, aes(x = x, y = y, fill = sst), alpha=0.8, interpolate = FALSE) + 
+  scale_fill_distiller("ºC per decade", palette = "RdYlBu", limits = c(min(had_slope_sub_clipped$sst), max(had_slope_sub_clipped$sst))) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  labs(x = "", y = "") +
+  theme(panel.background = element_rect(fill = "grey95")) +  
+  ggtitle(paste0("Caribbean warming rate (", format.Date(start_dateb, "%Y"), "-", format.Date(end_date, "%Y"), ")"))
+
+```
+
+```{r HadISST SST pval map subset (1981-2019), message=FALSE, warning=FALSE}
+
+## Clip Pathfinder slopes by MHW bounds
+had_pval_sub_b <- had_pval_sub[c(2,3,1, 4)] # just reordering the dataframe
+coordinates(had_pval_sub_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(had_pval_sub_b) <- proj # modify projection to match Pathfinder
+had_p_sub_clipped <- had_pval_sub_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+had_pval_sub_b_clipped <- as.data.frame(had_p_sub_clipped) # convert to dataframe
+
+
+## Plot the map
+had_pval_map_sub <- ggplot() +  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
+  geom_raster(data = had_pval_sub_b_clipped, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = FALSE) +
+  scale_fill_manual("p-value", values = "#045a8d") +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
+  coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
+  labs(x = "", y = "") +
+  theme(panel.background = element_rect(fill = "grey95")) +  
+  ggtitle("SST slope significance")
+
+```
+
+```{r HadISST SST map subset combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
+
+plot_grid(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
+  ggsave("figures/Supplemental_figs/FigS7_HadISST_subset_map.pdf", width = 14, height = 5)
+
+```
+
+**A**) Rate of SST change (°C per decade) across the Caribbean from 1981 to 2020 (HadISST; mean slope `r round(mean(had_slope_sub_clipped$sst), 2)` ± `r round(sd(had_slope_sub_clipped$sst), 3)` °C per decade) and **B**) significance of rate of SST change. Grey ocean area was not included in these analyses.
+
+---
+
+<br/>
+
+
+## Supplemental Tables {.tabset}
+
+### Table S1
+**Table S1.** Marine heatwave properties examined in this study
+
+| Metric | Units | Description  |
+|--------|:------|:-------------|
+| Frequency | Number of events | Number of discrete mhw events |
+| Total MHW days | days | The total number of days a location experienced a MHW per year |
+| Duration | days | The number of days between the start and end date of each distinct MHW event |
+| Peak intensity | °C | The maximum temperature, above the seasonal varying climatological mean, reached during the MHW event |  
+| Onset rate | °C/day | “Rate of temperature change between onset date and date of peak intensity” |
+| Return time | days | The number of days elapsed since a previous mhw event in that location |
+
+
+### Table S2
+**Table S2.** Calculated warming rates from both HadISST and Pathfinder databases for different temporal ranges.
+
+```{r HadISST warming rates for table}
+#### Basin values
+### Caribbean Basin (1871-2020)
+
+## Rate of warming
+had_basin_full_rate <- round(mean(had_slope_clipped$sst), 2)
+
+## Total C
+had_basin_full_value <- round(((had_basin_full_rate/10) * 150), 2) # multiply number of years by the yearly rate for total warming
+
+### Caribbean Basin (1990-2020)
+
+## Rate of warming
+had_basin_sub_rate <- round(mean(had_slope_sub_clipped$sst), 2)
+
+## Total C
+had_basin_sub_value <- round(((had_basin_sub_rate/10) * 31), 2) # multiply number of years by the yearly rate for total warming
+
+
+#### Reef-specific values
+### Caribbean Reefs (1871-2020)
+
+## Rate of warming
+had_sst <- had_gam_df # renaming the GAM dataframe for analyses below
+had_reef_full_lm <- lm(sst ~ year, data = had_sst) # regression of temperature and year to calculate rate of warming
+had_reef_full_rate <- round(had_reef_full_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
+
+## Total C
+had_reef_full_value <- round(((had_reef_full_rate/10) * 150), 2) # multiply number of years by the yearly rate for total warming
+
+
+### Caribbean Reefs (1990-2020)
+
+## Rate of warming
+had_sst_sub <- subset(had_sst, year >= 1990) # subset data for 1990-2020 only
+had_reef_sub_lm <- lm(sst ~ year, data = had_sst_sub) # regression of temperature and year to calculate rate of warming (since 1990)
+had_reef_sub_rate <- round(had_reef_sub_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
+
+## Total C
+had_reef_sub_value <- round(((had_reef_sub_rate/10) * 31), 2) # multiply number of years by the yearly rate for total warming
+
+```
+
+```{r Pathfinder warming rates for table}
+
+#### Basin values
+### Caribbean Basin (1871-2020)
+
+## Rate of warming
+path_basin_full_rate <- round(mean(path_slope_clipped$sst), 2)
+
+## Total C
+path_basin_full_value <- round(((path_basin_full_rate/10) * 39), 2) # multiply number of years by the yearly rate for total warming
+
+
+#### Reef-specific values
+### Caribbean Reefs (1981-2020)
+
+## Rate of warming
+path_sst <- path_gam_df # renaming the GAM dataframe for analyses below
+path_reef_full_lm <- lm(sst ~ year, data = path_sst) # regression of temperature and year to calculate rate of warming
+path_reef_full_rate <- round(path_reef_full_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
+
+## Total C
+path_reef_full_value <- round(((path_reef_full_rate/10) * 38), 2) # multiply number of years by the yearly rate for total warming
+
+
+### Caribbean Reefs (1990-2020)
+
+## Rate of warming
+path_sst_sub <- subset(path_sst, year >= 1990) # subset data for 1990-2020 only
+path_reef_sub_lm <- lm(sst ~ year, data = path_sst_sub) # regression of temperature and year to calculate rate of warming (since 1990)
+path_reef_sub_rate <- round(path_reef_sub_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
+
+## Total C
+path_reef_sub_value <- round(((path_reef_sub_rate/10) * 31), 2) # multiply number of years by the yearly rate for total warming
+
+```
+
+```{r table S2 compilation and visualization}
+
+## Compile dataframe from above calculated values/rates
+
+table_S2 <- data.frame("Temperature parameter" = c("Caribbean Basin (°C per decade)", "Caribbean Basin (total °C for period)", "Caribbean Reefs (°C per decade)", "Caribbean Reefs (total °C for period)"),
+                       "HadISST (1871-2020)" = c(had_basin_full_rate, had_basin_full_value, had_reef_full_rate, had_reef_full_value),
+                       "HadISST (1990-2020)" = c(had_basin_sub_rate, had_basin_sub_value, had_reef_sub_rate, had_reef_sub_value),
+                       "Pathfinder (1981-2019)" = c(path_basin_full_rate, path_basin_full_value, path_reef_full_rate, path_reef_full_value),
+                       "Pathfinder (1990-2019)" = c("NA", "NA", path_reef_sub_rate, path_reef_sub_value)
+)
+
+
+# View the completed 
+kable(table_S2, booktabs = TRUE, row.names = FALSE, col.names = c("Temperature parameter", "HadISST (1871-2020)", "HadISST (1990-2020)", "Pathfinder (1981-2019)", "Pathfinder (1990-2019)")) %>% 
+  kable_styling(font_size = 12, full_width = FALSE)
+
+```
+
+
+### Table S3
+**Table S3.** Mean ocean warming rate (°C per decade; with 95% confidence interval) and total increase in temperature (°C) on coral reefs within each Caribbean ecoregion since the noted year of inflection point. The inflection point for each ecoregion was identified as the year in which annual warming rates noticeably increased based on the GAM smoothed annual means (**see Figures 3 and S4**). Years indicated with an asterisk (*) represent inflection points identified for ecoregions that occurred before the Pathfinder dataset record, therefore those rates and total warming values were calculated from the beginning of the record in 1981.  
+
+```{r Pathfinder ecoregion SST dataframe construction}
+
+## Load the ecoregion extracted SST data (here using Rdata, but you can use csv if smaller)
+eco_sst_path_df <- readRDS("data/Pathfinder/Pathfinder_ecoregion_sst.rds")
+load("data/Pathfinder/Pathfinder_times.Rdata") # load the Pathfinder R data containing 'times'
+
+dates <- data.frame(date = paste("X", rep(1:460, 1), sep = ""),
+                    date3 = time,
+                    date2 = time)
+
+
+
+# Rename "Northern GoM" and "Northern GoM" to just GoM (these will be considered the same ecoregion from here on)
+eco_sst_path_df$ecoregion <- gsub("Northern G", "G", eco_sst_path_df$ecoregion)
+eco_sst_path_df$ecoregion <- gsub("Southern G", "G", eco_sst_path_df$ecoregion)
+
+eco_sst_path_df <- left_join(eco_sst_path_df, dates, by = c("date" = "date")) # left-join dataframes by date
+eco_sst_path_df <- eco_sst_path_df %>% separate(date2, c("year", "month", "day"), convert = TRUE) # create year, month, and day column columns
+eco_sst_path_df$month2 <- factor(eco_sst_path_df$month) # make a month as a factor column for plotting  
+
+```
+
+```{r Pathfinder extract warming rate from ecoregions}
+
+region_names <- levels(factor(eco_sst_path_df$ecoregion)) # pull list of the different ecoregions
+# make a dataframe of ecoregion and the year of warming increase
+ecoregion_warm_year <- data.frame(ecoregion = region_names,
+                                  warm_year = c(1986, 1985, 1981, 1986, 1981, 1981, 1981, 1993))
+
+# join the warming year to the SST dataframe
+eco_sst_path_df <- eco_sst_path_df %>% 
+  left_join(ecoregion_warm_year, by = c("ecoregion" = "ecoregion"))
+
+# create a dataframe to fill in the forloop
+ecoregion_slope <- data.frame(ecoregion = character(),
+                              warm_year = numeric(),
+                              slope = numeric(),
+                              lw_CI = numeric(),
+                              up_CI = numeric())
+
+# forloop that will calculate linear rate of warming per region along with confidence intervals
+for (region in 1:length(region_names)) {
+  
+  ecoregion_subset <- subset(eco_sst_path_df, ecoregion == ecoregion_warm_year[region, 1]) # subset for selected ecoregion
+  ecoregion_subset <- subset(ecoregion_subset, year >= ecoregion_warm_year[region, 2]) # subset for year of warming
+  ecoregion_lm <- lm(sst ~ year, data = ecoregion_subset) # perform regression of sst through time
+  slope <- round(ecoregion_lm[["coefficients"]][["year"]], 3) # extract the slope of SST over time
+  lw_CI <- round(confint(ecoregion_lm, level = 0.95)[2,1], 4) # extract the lower CI 
+  up_CI <- round(confint(ecoregion_lm, level = 0.95)[2,2], 4) # extract the upper CI 
+  
+  # add data to dataframe and convert rates to per decade 
+  slope_df <- data.frame(ecoregion = ecoregion_warm_year[region, 1],
+                         warm_year = ecoregion_warm_year[region, 2],
+                         slope = (slope * 10),
+                         lw_CI = (lw_CI * 10),
+                         up_CI = (up_CI * 10))
+  
+  ecoregion_slope <- rbind(ecoregion_slope, slope_df) # add to the existing dataframe
+}
+
+# calculate the total amount warmed per ecoregion
+ecoregion_slope$total_warm <- round(((ecoregion_slope$slope / 10) * (2019 - ecoregion_slope$warm_year)), 2)
+
+```
+
+```{r table S3 visualization}
+
+## Compile dataframe from ecoregion rates
+kable(ecoregion_slope, booktabs = TRUE, row.names = FALSE, col.names = c("Ecoregion", "Inflection point", "Mean rate (°C per decade)", "Lower confidence interval", "Upper confidence interval", "Warming extent (°C)")) %>% 
+  kable_styling(font_size = 12, full_width = FALSE)
+
+```
+
+
+## Session information {.tabset}
+
+All code was written by [Colleen B. Bove](https://colleenbove.science), feel free to contact with questions.
+
+Session information from the last run date on `r date`:
+
+```{r session info}
+
+sessionInfo()
+
+```

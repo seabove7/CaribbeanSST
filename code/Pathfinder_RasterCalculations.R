@@ -1,17 +1,18 @@
-##############################################################
-#### Pathfinder Raster Conversions and Slope Calculations ####
-##############################################################
-##--- Last edit was made by Colleen Bove on 29 July 2020 ---##
+###############################################################
+##### Pathfinder Raster Conversions and Slope Calculations ####
+###############################################################
+##--- Last edit was made by Colleen Bove on 15 March 2021 ---##
 
 #---- This script was used with the Pathfinder SST netCDF (pathfinder_combined_monthly_data.nc) to:
 #------- 1) add 'NA' to missing vaules (set as -52 in netCDF)
 #------- 2) convert all values from Kelvin to Celsius
 #------- 3) save edited raster as new netCDF (PathfinderSST_monthly_edit.nc)
 #------- 4) calculate slope of change in SST (C / decade) per pixel and save as .csv/.Rdata
+#------- 5) calculate p-value of SST slope per pixel and save as .csv
 
 #--- This script was run on a high performance computing cluster due to time requirements (~ 3 hours)
 #--- You will need this script and the Pathfinder netCDF (pathfinder_combined_monthly_data.nc) on the cluster
-#--- A note in the Rmarkdown (CaribbeanSST_analysis.Rmd) file references where this script was run 
+#--- A note in the Rmarkdown (CaribbeanSST_manuscript.Rmd) file references where this script was run 
 ##############################################################
 
 
@@ -63,24 +64,23 @@ time <- nc_times[Tstart_index2:Tend_index2] # this 'time' list is used throughou
 #### -- End of previously run scirpt. Below will run new script using the rasterBrick and calculate slope
 
 
-
-## Remove NAs and convert to C
+### Remove NAs and convert to C
 KtoC <- function(x){round(x-273.15,2)} # converts the raster from Kelvin to Celsius
 NAset <- function(x){x[x < -54]<-NA; return(x)} # Pathfinder uses the value -54 (K) to denote missing data and this function replaces that with NA
 data_brick2 <- calc(data_brick2, NAset) # apply the NA function written above to raster
 data_brick2b <- calc(data_brick2, KtoC) # apply the Kelvin function written above to raster
 
 
+### Slope Calculation
 ## Calculate slope of temperature change across time for each pixel
 # simple lm function applied to the raster brick to calculate the slope of temperature change over timescale of raster
-lm.fun2 <- function(x, time){
+lm.fun <- function(x, time){
   if(is.na(x)){NA} # this removes any NA values from the slope calculations 
   else{
     lm(x~time)$coefficients[2]*60*60*24 # slope here is degrees/day
   }}
 
-raster_slope2 <- calc(data_brick2, function(x)lm.fun2(x, time = time)) # function applied here
-
+raster_slope2 <- calc(data_brick2, function(x)lm.fun(x, time = time)) # function applied here
 
 ## Create dataframe from calculated slope raster in C per decade for plotting
 raster_slope2 <- raster_slope2*(365.25*10) # this is currently C per decade
@@ -88,8 +88,29 @@ path_slope <- as.data.frame(as(raster_slope2, "SpatialPixelsDataFrame")) # conve
 colnames(path_slope) <- c("sst", "x", "y")
 
 
-## Save the edited netCDF file and the slope raster/dataframe
+### P value Calculation
+## function to pull the p value per pixel of the simple lm applied to the full HadISST raster brick 
+pval.fun <- function(x, time)
+{
+  if(any(is.na(x))){NA}
+  else{
+    summary(lm(x ~ time))$coefficients[4] # pulls the p value
+  }
+}
+
+## function to pull the p value per pixel of the simple lm applied to the full Pathfinder raster brick 
+raster_pval2 <- calc(path_brick, function(x)pval.fun(x, time = time))
+
+# convert the raster to a df for plotting
+path_pavl <- as.data.frame(as(raster_pval2, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
+colnames(path_pavl) <- c("pval", "x", "y")
+path_pavl$bins <- cut(path_pavl$pval, breaks = bins, labels = bin_names) # bins the pvales into 6 unique bins for plotting
+
+
+
+### Save the edited netCDF file and the slope raster/dataframe
 writeRaster(data_brick2b, filename = "PathfinderSST_monthly_edit.nc", format="CDF", overwrite=TRUE)
 save(path_slope, file = "Pathfinder_slope.Rdata")
 write.csv(path_slope, file = "Pathfinder_slope.csv", row.names=FALSE)
+write.csv(path_pavl, file = "Pathfinder_pval.csv", row.names=FALSE)
 

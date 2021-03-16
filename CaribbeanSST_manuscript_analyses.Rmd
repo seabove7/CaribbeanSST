@@ -220,7 +220,7 @@ nc_times <- nc_times+3600*3 #to center readings at noon - just cosmetics
 nc_close(ncdf_file) #close the file
 
 #temporal subsetting  
-start_date <- "1870/01/01"
+start_date <- "1871/01/01"
 end_date <- "2020/12/31"
 start_date <- as.POSIXct(start_date,tz="UTC")
 end_date <- as.POSIXct(end_date,tz="UTC")
@@ -228,7 +228,7 @@ end_date <- as.POSIXct(end_date,tz="UTC")
 ##restrict temporally - here we are not restricting temporally so not data is being removed here
 Tstart_index <- min(which(difftime(nc_times,start_date)>0))
 #Tend_index <- min(which(difftime(nc_times,end_date)>0))
-#data_brick <- data_brick[[Tstart_index:Tend_index]]
+data_brick <- data_brick[[Tstart_index:length(nc_times)]]
 time <- nc_times[Tstart_index:length(nc_times)]
 
 save(time, nc_times, file = "data/HadISST/HadISST_times.Rdata") # save the time variables for IDs for running scripts remotely
@@ -237,9 +237,11 @@ save(time, nc_times, file = "data/HadISST/HadISST_times.Rdata") # save the time 
 ### subsetting the HadISST raster for 1981 - 2019 timespand for comparison with Pathfinder
 start_dateb <- "1981-08-16" #"1990-01-16" 
 start_dateb <- as.POSIXct(start_dateb, tz="UTC")
-Tstart_indexb <- min(which(difftime(nc_times,start_dateb)>0))
+Tstart_indexb <- min(which(difftime(nc_times, start_dateb)>0))
 
-data_brickb <- data_brick[[Tstart_indexb:length(nc_times)]]
+data_brickb <- brick(had_data)
+data_brickb <- crop(data_brickb, extent(Xmin, Xmax, Ymin, Ymax))
+data_brickb <- data_brickb[[Tstart_indexb:length(nc_times)]]
 timeb <- nc_times[Tstart_indexb:length(nc_times)]
 
 ```
@@ -503,7 +505,7 @@ had_sst_xts <- xts(t(had_sst), time) # t is used to transpose the matrix because
 had_sst_df <- data.frame(date=index(t(had_sst_xts)), coredata(t(had_sst_xts))) # convert xts object to dataframe
 had_sst_df$reef <- factor(seq(1, length(had_sst_df$date), 1)) # ID the columns to identify unique reefs
 had_sst_df$date <- NULL # remove this column since it is repetitive 
-had_sst_long <- gather(had_sst_df, date, sst, X1870.01.16.15.00.00:X2020.12.16.15.00.00) # convert from wide to long format
+had_sst_long <- gather(had_sst_df, date, sst, X1871.01.16.15.00.00:X2020.12.16.15.00.00) # convert from wide to long format
 
 ## update the dataframe for saving
 had_gps <- had_sst_long %>% separate(date, c("year", "month", "day", "hour", "min", "sec")) # create year, month, and day column columns
@@ -570,7 +572,7 @@ hadplot_markdown <- ggplot() +
   scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
   ylab('SST (°C)') +
-  ggtitle("HadISST (1870 - 2020)") + 
+  ggtitle("HadISST (1871 - 2020)") + 
   theme(plot.title = element_text(size = 13)) +
   ggsave("figures/Fig2_HadISST_SST_monthly.pdf", width = 6, height = 3.5)
 
@@ -1147,7 +1149,7 @@ pathplot_markdown <- ggplot() +
   scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
   ylab('SST (°C)') +
-  ggtitle("Pathfinder (1980 - 2019)") + 
+  ggtitle("Pathfinder (1981 - 2019)") + 
   theme(plot.title = element_text(size = 13)) +
   ggsave("figures/Fig4_Pathfinder_SST_monthly.pdf", width = 6, height = 3.5)
 
@@ -1307,7 +1309,7 @@ ggplotly(combo_plot)
 A simple linear model was applied to each grid through time using a forloop to calculate the slope of SST change. Plots below are adjusted to show slope of $^\circ$C per decade for each timespan. Additionally, the HadISST dataset was subset to to include the same time range available for Pathfinder for comparison between the two datasets. 
 
 
-### HadISST dataset (1870 - 2019)
+### HadISST dataset (1870 - 2020)
 
 ```{r had SST map, message=FALSE, warning=FALSE}
 
@@ -1450,7 +1452,7 @@ path_map <- ggplot() +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   ylab("Latitude") +
   xlab("Longitude") +
-  ggtitle(paste0("SST slope from ", format.Date(start_dateb, "%Y"), " to ", format.Date(end_date, "%Y")," (Pathfinder)"))
+  ggtitle(paste0("SST slope from ", format.Date(start_dateb, "%Y"), " to 2019")," (Pathfinder)")
 
 ```
 
@@ -1615,7 +1617,7 @@ eco_sst_df <- data.frame('date' = integer(),
 ## Create a forloop for extracting SST at reef points within each ecoregion
 
 for(e in 1:length(eco_list)) {
-  
+  e = 1
   ## First, select reefs within specific ecoregion 
   ecoregion_name <- eco_list[[e]] # pull the name of ecoregion
   subset_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == ecoregion_name, ] # subset for only the desired ecoregion
@@ -1623,7 +1625,7 @@ for(e in 1:length(eco_list)) {
   ecoregion_reefs <- reef_points[subset_ecoreg, ] # clip the reef points by the ecoregion bounds
   
   for(i in 1:raster_brick@data@nlayers) {
-   
+   i = 1
     ## Then, extract SST from reef locations wihtin the current ecoregion and append to dataframe
     raster <- raster_brick[[i]] # select the layer of the rasterbrick 
     sst_vals <- raster::extract(raster, ecoregion_reefs) # extract SST at lat/lon of each reef
@@ -1636,7 +1638,7 @@ for(e in 1:length(eco_list)) {
   }
 }
 
-n## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
+## Once completed, saves the resulting dataframe as both a .Rdata object and .csv
 # *** Only uncomment these lines if you want to write over existing files ***
 #save(eco_sst_df, file = "data/HadISST/Ecoregion_SST/HadISST_ecoregion_sst.Rdata")
 #write.csv(eco_sst_df, file = "data/HadISST/Ecoregion_SST//HadISST_ecoregion_sst", row.names=FALSE)
@@ -1881,7 +1883,7 @@ ecoregion_year_mean$lab <- paste(LETTERS[1:8])
 #### Data visualization per year across months #### 
 
 ## Plot with smoothed trend
-ggplot() +
+test <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 30, hjust = 0.8), text = element_text(size = 14)) +
   geom_segment(data = ecoregion_year_mean, aes(y = mean, yend = mean, x = 1870, xend = 2020), colour = "grey", linetype = 2) +
@@ -1928,7 +1930,7 @@ map_slope <- ggplot(OISST_nTrend_carib, aes(x = lon, y = lat)) +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   labs(x = "", y = "") +
   guides(fill = guide_colorbar(frame.colour = "black", ticks.colour = "black", barwidth = 12)) +
-  ggtitle("Change in marine heat wave frequency (1981-2017)")
+  ggtitle("Change in marine heat wave frequency (1981-2018)")
 
 
 ## MHW significance map
@@ -1941,7 +1943,7 @@ map_p <- ggplot(OISST_nTrend_carib, aes(x = lon, y = lat)) +
   theme(panel.background = element_rect(fill = "grey95")) +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   labs(x = "", y = "") +
-  ggtitle("Significance of change in heat wave frequency (1981-2017)")
+  ggtitle("Significance of change in heat wave frequency (1981-2018)")
 
 
 ### Pathfinder SST slope map
