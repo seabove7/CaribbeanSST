@@ -1016,7 +1016,10 @@ Comparison of HadISST (1871-2020) and Pathfinder (1981-2019) SST recorded on Car
 
 
 ### Figure S4
-*Still need to update this figure*
+
+![](figures/Supplemental_figs/Ecoregion_MapSST.png)
+
+Historic SST trends on coral reefs within Caribbean ecoregions (1871 - 2020) with corresponding reef locations (see Figures 1, 3 in the main text). The colour of each reef location and box around long-term SST (HadISST) plots represent the designated ecoregion. Plots depict SST data with GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the mean SST over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean for the A) Bahamian, B) Eastern Caribbean, C) Floridian, D) Greater Antilles, E) Gulf of Mexico, F) Southern Caribbean, G) Southwestern Caribbean, and H) Western Caribbean ecoregions. 
 
 <br/>
 
