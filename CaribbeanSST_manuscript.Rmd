@@ -1,15 +1,14 @@
 ---
 title: 'One Hundred and Fifty Years of Warming on Caribbean Coral Reefs'
 output:
-  html_document:
-    theme: simplex
+ rmarkdown::html_document:
+    theme: Leonids
     toc: yes
     toc_float: yes
-  pdf_document:
-    toc: yes
 ---
 
 ```{r knit options, include=FALSE}
+library(prettydoc)
 
 knitr::opts_chunk$set(
 	echo = FALSE,
@@ -21,7 +20,7 @@ knitr::opts_chunk$set(
 ```{r load libraries}
 
 ### Used packages that need to be installed to run code:
-# install.packages("sf", "ncdf4", "ggrepel", "raster", "viridis", "maptools", "rgdal", "ggplot2", "cowplot", "tidyverse", "rnaturalearth", "xts", "RColorBrewer", "tidyr", "dplyr", "binr", "fields", "gganimate", "sp", "mgcv", "plotly", "grDevices", "repmis", "foreach", "kableExtra")
+# install.packages("sf", "ncdf4", "ggrepel", "raster", "viridis", "maptools", "rgdal", "ggplot2", "cowplot", "tidyverse", "rnaturalearth", "xts", "RColorBrewer", "tidyr", "dplyr", "binr", "fields", "gganimate", "sp", "mgcv", "plotly", "grDevices", "repmis", "foreach", "kableExtra", "splines", "gridExtra")
 
 # library(devtools)
 # devtools::install_github("NCAR/fields")
@@ -53,6 +52,8 @@ library(plotly)
 library(kableExtra)
 library(grDevices)
 library(repmis)
+library(splines)
+library(gridExtra)
 
 ```
 
@@ -327,8 +328,8 @@ time <- nc_times[Tstart_index:length(nc_times)]
 save(time, nc_times, file = "data/HadISST/HadISST_times.Rdata") # save the time variables for IDs for running scripts remotely
 
 
-### subsetting the HadISST raster for 1981 - 2019 timespan for comparison with Pathfinder
-start_dateb <- "1981-08-16" #"1990-01-16" 
+### subsetting the HadISST raster for 1981 - 2020 timespan for comparison with Pathfinder
+start_dateb <- "1981-01-16" #"1990-01-16" 
 start_dateb <- as.POSIXct(start_dateb, tz="UTC")
 Tstart_indexb <- min(which(difftime(nc_times, start_dateb)>0))
 
@@ -336,6 +337,17 @@ data_brickb <- brick(had_data)
 data_brickb <- crop(data_brickb, extent(Xmin, Xmax, Ymin, Ymax))
 data_brickb <- data_brickb[[Tstart_indexb:length(nc_times)]]
 timeb <- nc_times[Tstart_indexb:length(nc_times)]
+
+
+### subsetting the HadISST raster for 1987 - 2020 timespan for rate since inflection
+start_date_87 <- "1987-01-16"
+start_date_87 <- as.POSIXct(start_date_87, tz="UTC")
+Tstart_index_87 <- min(which(difftime(nc_times, start_date_87)>0))
+
+data_brick_87 <- brick(had_data)
+data_brick_87 <- crop(data_brick_87, extent(Xmin, Xmax, Ymin, Ymax))
+data_brick_87 <- data_brick_87[[Tstart_index_87:length(nc_times)]]
+time_87 <- nc_times[Tstart_index_87:length(nc_times)]
 
 ```
 
@@ -357,7 +369,7 @@ had_slope <- as.data.frame(as(raster_slope, "SpatialPixelsDataFrame")) # convert
 colnames(had_slope) <- c("sst", "x", "y")
 
 
-########## Same idea, this time only being used on the 1981 - 2019 subset
+########## Same idea, this time only being used on the 1981 - 2020 subset
 
 # apply the function
 raster_slopeb <- calc(data_brickb, function(x)lm.fun(x, time = timeb))
@@ -366,6 +378,16 @@ raster_slopeb <- calc(data_brickb, function(x)lm.fun(x, time = timeb))
 raster_slope_sub <- raster_slopeb*(365.25*10) # this is currently C per decade
 had_slope_sub <- as.data.frame(as(raster_slope_sub, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
 colnames(had_slope_sub) <- c("sst", "x", "y")
+
+
+## And again for 1987 - 2020 for the rate since inflection:
+# apply the function
+raster_slope_87 <- calc(data_brick_87, function(x)lm.fun(x, time = time_87))
+
+# convert the raster to a dataframe for plotting
+raster_slope_sub_87 <- raster_slope_87*(365.25*10) # this is currently C per decade
+had_slope_sub_87 <- as.data.frame(as(raster_slope_sub_87, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
+colnames(had_slope_sub_87) <- c("sst", "x", "y")
 
 # --------- *Plotting occurs down at the bottom of the markdown file* --------- #
 
@@ -492,11 +514,26 @@ had_month_plot <- ggplot() +
 
 ```{r HadISST annual SST}
 
-## construct df for the GAM smoothing of mean SST
+## Fit a GAM to the HadISST data to plot and later calculate significant slopes (Figure S2)
 had_gam_df <- gather(had_gps, reef, sst, `1`:`5607`)
 had_gam_df$date <- gsub("\\X", "", had_gam_df$date) # convert year to numeric and remove 'X'
-had_gam_df <- had_gam_df %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
-had_gam_df$date <- as.Date(with(had_gam_df, paste(year, month, day, sep="-")), "%Y-%m-%d")
+had_gam_month <- had_gam_df %>% 
+  separate(date, c("year", "month","day"), convert = TRUE) %>% # create year, month, and day column columns
+  drop_na(sst) %>% # drop all NA values
+  group_by(year, month) %>% # group by month and year t calculate mean below
+  summarise(month_sst = mean(sst))
+
+had_gam <- gam(month_sst ~ s(year, bs = 'cr', k = -1) + s(month, bs = 'cc', k = 12), data = had_gam_month)
+
+## Below is model checking for GAMs that should be checked out before proceeding when fitting a new GAM
+#summary(had_gam)
+#gam.check(had_gam)
+#plot(had_gam)
+#qq.gam(had_gam)
+
+had_gam_pred <- predict.gam(had_gam, type = "response", se.fit = TRUE, exclude = s(month)) # predict response-level values from the GAM per year
+had_predict_df <- cbind(had_gam_month, response = had_gam_pred$fit, lwr = had_gam_pred$fit - 2 * had_gam_pred$se.fit, upr = had_gam_pred$fit + 2 * had_gam_pred$se.fit) # add the predicted fit and lower/upper CIs to the GAM dataframe
+
 
 
 #### Data visualization per year across months #### 
@@ -520,14 +557,14 @@ had_year_plot <- ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14)) +
   geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "grey", linetype = 2) +
-  geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) + 
+  geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.1, linetype = 1, size = 0.2) + 
   #geom_line(data = HADI_year_avg, aes(x = year, y = mean), colour = "black", group = 1, size = 1, alpha = 0.7) + # mean sst
   scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020)) +
   ylab('SST (°C)') +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
-  geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) + # max sst
-  geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + # min sst
-  geom_smooth(data = had_gam_df, method = "gam", aes(x = year, y = sst), colour = "black", group = 1, size = 1, se = FALSE, formula = y ~ s(x, bs = "cs")) + # smoothed mean temp over all data
+  geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.35) + # max sst
+  geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.35) + # min sst
+  geom_line(data = had_predict_df, aes(x = year, y = response)) + # the predicted GAM curve (modelled above)
   coord_cartesian(xlim = c(1870, 2020)) 
 
 ```
@@ -705,6 +742,104 @@ ggplot() +
 
 
 ### Figure S2
+
+
+
+
+```{r calculate HadISST GAM slope significance}
+
+## Source the required functions written by Gavin Simpson for calculating significant slopes based on first derivative of GAM
+# This code is modified from his tutorials here: https://fromthebottomoftheheap.net/2014/05/15/identifying-periods-of-change-with-gams/
+source('code/GSimpsonFunctions.R') 
+
+## Derivative calculation (using the HadISST GAM modelled above (had_gam))
+m_terms <- attr(terms(had_gam), "term.labels") # pull out the model term labels (here, "year" and "month")
+newD <- data.frame(model.frame(had_gam)[, m_terms, drop = FALSE]) # creates new dataframe of the terms identified above
+X0 <- predict(had_gam,newD, type = "lpmatrix") # predict returning matrix of linear predictors from model derivatives
+eps <- 1e-7 # set finite difference interval
+newD$year <- newD$year + eps ## shift the evaluation mesh
+X1 <- predict(had_gam, newD, type = "lpmatrix")
+Xp <- (X1 - X0) / eps
+t_labs <- attr(had_gam$terms, "term.labels") # number of smooth terms
+nt <- length(t_labs)
+
+## forloop to run through smooth terms and calculate derivative and SE
+lD <- vector(mode = "list", length = nt) # create empty list to hold the derivatives
+names(lD) <- t_labs # rename with the smoothing terms
+for(i in seq_len(nt)) {
+  Xi <- Xp * 0
+  want <- grep(t_labs[i], colnames(X1))
+  Xi[, want] <- Xp[, want]
+  df <- Xi %*% coef(had_gam)
+  df.sd <- rowSums(Xi %*% had_gam$Vp * Xi)^.5
+  lD[[i]] <- list(deriv = df, se.deriv = df.sd)
+}
+
+## Modify the lD object created above
+class(lD) <- "Deriv" # change the class to 'Deriv'
+lD$gamModel <- had_gam # add GAM
+lD$eps <- eps # add eps (defined above)
+newD$year <- newD$year - eps # modify year by eps
+lD$eval <- newD # add modified year
+
+# confint and signifD are sourced from GSimpson_functions.R
+# signifD is commented out and regions of significance are calculated manually to allow plotting +/- intervals in different colors 
+CI <- confint(lD, term = 'year', alpha = 0.05) # calculate upper and lower 95% CI (alpha = 0.05) of term "year"
+sig <- data.frame(up = CI$year$upper, low = CI$year$lower, seq = seq(1:length(CI$year$upper))) # create a dataframe of the upper/lower CI
+incr <- sig[sig$low > 0,] # dataframe with all rows with CI greater than 0 (significant increase)
+decr <- sig[sig$up < 0,] # dataframe with all rows with CI lower than 0 (significant decline)
+had_predict_df$incr <- had_predict_df$decr <- NA # adds columns with NAs for 'incr' and 'decr' to the predicted dataframe
+had_predict_df$incr[incr$seq] <- 1 # replaces NA with 1 in 'incr' column when CI is significantly increasing
+had_predict_df$decr[decr$seq] <- 1 # replaces NA with 1 in 'decr' column when CI is significantly decreasing
+
+
+## Create a dataframe of significant increasing or decreasing slope values to overlay GAM curve
+had_gam_slope <- data.frame("year" = integer(),
+                            "value" = numeric(),
+                            "type" = character())
+
+for(i in c("incr", "decr")) {
+  change_yrs <- data.frame(year = had_predict_df$year[which(had_predict_df[i] == 1)],
+                       y = as.numeric(had_predict_df$response[which(had_predict_df[i] == 1)]))
+  change_yrs2 <- change_yrs[!duplicated(change_yrs$year),]
+  change_slope <- expand.grid(min(change_yrs2$year):max(change_yrs2$year))
+  change_slope$val <- apply(change_slope, 1, function(x) if (nrow(subset(change_yrs2, year == x[1]))) subset(change_yrs2, year == x[1])$y else NA)
+  change_slope$type <- rep(i, nrow(change_slope))
+  names(change_slope) <- c("year", "value", "type")
+  had_gam_slope <- rbind(had_gam_slope, change_slope)
+}
+
+```
+
+```{r plot the HadISST GAM with sig slopes}
+
+ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14), legend.position = "none") +
+  geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "grey", linetype = 2) +
+  geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.1, linetype = 1, size = 0.2) + 
+  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020)) +
+  ylab('SST (°C)') +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
+  geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.35) + # max sst
+  geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.35) + # min sst
+  geom_rect(aes(ymin = -Inf, ymax = Inf, xmin = 1987, xmax = Inf), colour = 'black', fill = "#fee090", alpha = 0.2) +
+  geom_text(aes(x = 1992, y = 23.9, label = "1987"), size = 3) +
+  geom_line(data = had_predict_df, aes(x=year, y=response)) +
+  geom_line(data = had_gam_slope, aes(x = year, y = value, colour = type), lwd = 0.75) +
+  scale_colour_manual(values = c("#4575b4", "#d73027")) +
+  coord_cartesian(xlim = c(1870, 2020))  +
+  ggsave("figures/Supplemental_figs/FigS2_HadISST_GAM_slopes.pdf", width = 6, height = 3.75)
+
+```
+
+
+Historic SST trend on Caribbean coral reefs (1871–2020). Long-term SST records (HadISST) on Caribbean coral reefs depicting significant changes in warming rate based on the first derivative of the GAM modelled slope. The GAM smoothed annual mean SST time is represented by the black line with significantly positive (red) or negative (blue) identified over the curve. The most recent significant warming event began in 1987 and is highlighted in the yellow box. The annual maximum (red line) and annual minimum (blue line) SST are also depicted, along with the overall mean SST for all sites over the entire period (27.3 °C; grey dashed line). The grey ribbon represents the 95% confidence interval around the true annual SST mean through time.
+
+<br/>
+
+
+### Figure S3
 
 ```{r Pathfinder raster and times}
 
@@ -970,7 +1105,7 @@ path_year_plot <- ggplot() +
 
 # Saves the manuscript version of the Pathfinder historic SST
 plot_grid(path_month_plot, path_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
-  ggsave("figures/Supplemental_figs/FigS2_Pathfinder_SST_trends.pdf", width = 6, height = 7.5)
+  ggsave("figures/Supplemental_figs/FigS3_Pathfinder_SST_trends.pdf", width = 6, height = 7.5)
 
 ```
 
@@ -979,7 +1114,7 @@ Historic SST records (1981-2019; Pathfinder) on Caribbean coral reefs depicting 
 <br/>
 
 
-### Figure S3
+### Figure S4
 
 ```{r combined annual SST plot}
 
@@ -1006,7 +1141,7 @@ combo_plot <- ggplot() +
   ggtitle("Caribbean coral reefs historic SST trends") +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
   coord_cartesian(xlim = c(1870, 2020)) +
-  ggsave("figures/Supplemental_figs/FigS3_Both_SST_trends.pdf", width = 6, height = 4)
+  ggsave("figures/Supplemental_figs/FigS4_Both_SST_trends.pdf", width = 6, height = 4)
 
 ggplotly(combo_plot)
 
@@ -1017,7 +1152,7 @@ Comparison of HadISST (1871-2020) and Pathfinder (1981-2019) SST recorded on Car
 <br/>
 
 
-### Figure S4
+### Figure S5
 
 ![](figures/Supplemental_figs/Ecoregion_MapSST.png)
 
@@ -1236,13 +1371,13 @@ cowplot::plot_grid(path_map_markdown, mhw_map_markdown, labels = c("A", "B"))
 <br/>
 
 
-### Figure S5
+### Figure S6
 
 ```{r combined SST and MHW p value maps}
 
 ## Combined p values:
 FigureS5 <- cowplot::plot_grid(path_pval_map, map_p, align = "hv", labels = c("A", "B")) +
-  ggsave("figures/Supplemental_figs/FigS5_SST_MHW_significance_map.pdf", width = 14.5, height = 5)
+  ggsave("figures/Supplemental_figs/FigS6_SST_MHW_significance_map.pdf", width = 14.5, height = 5)
 
 # markdown version of plot
 cowplot::plot_grid(path_pval_markdown, mhw_pval_markdown, align = "hv", labels = c("A", "B")) 
@@ -1256,7 +1391,7 @@ Significance of **A**) rate of SST change (°C per decade) and **B**) number of 
 <br/>
 
 
-### Figure S6
+### Figure S7
 
 ```{r HadISST full SST map, message=FALSE, warning=FALSE}
 
@@ -1310,7 +1445,7 @@ had_pval_map <- ggplot() +
 ```{r HadISST full SST map combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
 plot_grid(had_map, had_pval_map, labels = c("A", "B")) +
-  ggsave("figures/Supplemental_figs/FigS6_HadISST_map.pdf", width = 14, height = 5)
+  ggsave("figures/Supplemental_figs/FigS7_HadISST_map.pdf", width = 14, height = 5)
 
 ```
 
@@ -1321,7 +1456,7 @@ plot_grid(had_map, had_pval_map, labels = c("A", "B")) +
 <br/>
 
 
-### Figure S7
+### Figure S8
 
 ```{r HadISST SST map subset (1981-2019), message=FALSE, warning=FALSE}
 
@@ -1374,7 +1509,7 @@ had_pval_map_sub <- ggplot() +
 ```{r HadISST SST map subset combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
 plot_grid(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
-  ggsave("figures/Supplemental_figs/FigS7_HadISST_subset_map.pdf", width = 14, height = 5)
+  ggsave("figures/Supplemental_figs/FigS8_HadISST_subset_map.pdf", width = 14, height = 5)
 
 ```
 
@@ -1411,15 +1546,33 @@ plot_grid(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
 had_basin_full_rate <- round(mean(had_slope_clipped$sst), 2)
 
 ## Total C
-had_basin_full_value <- round(((had_basin_full_rate/10) * 150), 2) # multiply number of years by the yearly rate for total warming
+had_basin_full_value <- round(((had_basin_full_rate/10) * (2020-(1871-1))), 2) # multiply number of years by the yearly rate for total warming
 
-### Caribbean Basin (1990-2020)
+
+### Caribbean Basin (1981-2020)
 
 ## Rate of warming
-had_basin_sub_rate <- round(mean(had_slope_sub_clipped$sst), 2)
+had_basin_sub_81_rate <- round(mean(had_slope_sub_clipped$sst), 2)
 
 ## Total C
-had_basin_sub_value <- round(((had_basin_sub_rate/10) * 31), 2) # multiply number of years by the yearly rate for total warming
+had_basin_sub_81_value <- round(((had_basin_sub_81_rate/10) * (2020-(1981-1))), 2) # multiply number of years by the yearly rate for total warming
+
+
+### Caribbean Basin (1987-2020)
+
+## Clip HadISST slopes by MHW bounds
+had_slope_sub_87 <- had_slope_sub_87[c(2,3,1)] # just reordering the dataframe
+coordinates(had_slope_sub_87) <- c("x", "y") # transform lat/lon to SpatialPointsDataFrame
+projection(had_slope_sub_87) <- proj # modify projection to match Pathfinder
+had_87_slope_clipped <- had_slope_sub_87[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
+had_slope_sub_87_clipped <- as.data.frame(had_87_slope_clipped) # convert to dataframe
+
+## Rate of warming
+had_basin_sub_87_rate <- round(mean(had_slope_sub_87_clipped$sst), 2)
+
+## Total C
+had_basin_sub_87_value <- round(((had_basin_sub_87_rate/10) * (2020-(1987-1))), 2) # multiply number of years by the yearly rate for total warming
+
 
 
 #### Reef-specific values
@@ -1431,35 +1584,46 @@ had_reef_full_lm <- lm(sst ~ year, data = had_sst) # regression of temperature a
 had_reef_full_rate <- round(had_reef_full_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
 
 ## Total C
-had_reef_full_value <- round(((had_reef_full_rate/10) * 150), 2) # multiply number of years by the yearly rate for total warming
+had_reef_full_value <- round(((had_reef_full_rate/10) * (2020-(1871-1))), 2) # multiply number of years by the yearly rate for total warming
 
 
-### Caribbean Reefs (1990-2020)
+### Caribbean Reefs (1981-2020)
 
 ## Rate of warming
-had_sst_sub <- subset(had_sst, year >= 1990) # subset data for 1990-2020 only
-had_reef_sub_lm <- lm(sst ~ year, data = had_sst_sub) # regression of temperature and year to calculate rate of warming (since 1990)
-had_reef_sub_rate <- round(had_reef_sub_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
+had_sst_sub_81 <- subset(had_sst, year >= 1981) # subset data for 1981-2020 only
+had_reef_sub_81_lm <- lm(sst ~ year, data = had_sst_sub_81) # regression of temperature and year to calculate rate of warming (since 1981)
+had_reef_sub_81_rate <- round(had_reef_sub_81_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
 
 ## Total C
-had_reef_sub_value <- round(((had_reef_sub_rate/10) * 31), 2) # multiply number of years by the yearly rate for total warming
+had_reef_sub_81_value <- round(((had_reef_sub_81_rate/10) * (2020-(1981-1))), 2) # multiply number of years by the yearly rate for total warming
+
+
+### Caribbean Reefs (1987-2020)
+
+## Rate of warming
+had_sst_sub_87 <- subset(had_sst, year >= 1987) # subset data for 1987-2020 only
+had_reef_sub_87_lm <- lm(sst ~ year, data = had_sst_sub_87) # regression of temperature and year to calculate rate of warming (since 1987)
+had_reef_sub_87_rate <- round(had_reef_sub_87_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
+
+## Total C
+had_reef_sub_87_value <- round(((had_reef_sub_87_rate/10) * (2020-(1987-1))), 2) # multiply number of years by the yearly rate for total warming
 
 ```
 
 ```{r Pathfinder warming rates for table}
 
 #### Basin values
-### Caribbean Basin (1871-2020)
+### Caribbean Basin (1981-2020)
 
 ## Rate of warming
 path_basin_full_rate <- round(mean(path_slope_clipped$sst), 2)
 
 ## Total C
-path_basin_full_value <- round(((path_basin_full_rate/10) * 39), 2) # multiply number of years by the yearly rate for total warming
+path_basin_full_value <- round(((path_basin_full_rate/10) * (2019-(1981-1))), 2) # multiply number of years by the yearly rate for total warming
 
 
 #### Reef-specific values
-### Caribbean Reefs (1981-2020)
+### Caribbean Reefs (1981-2019)
 
 ## Rate of warming
 path_sst <- path_gam_df # renaming the GAM dataframe for analyses below
@@ -1467,18 +1631,18 @@ path_reef_full_lm <- lm(sst ~ year, data = path_sst) # regression of temperature
 path_reef_full_rate <- round(path_reef_full_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
 
 ## Total C
-path_reef_full_value <- round(((path_reef_full_rate/10) * 38), 2) # multiply number of years by the yearly rate for total warming
+path_reef_full_value <- round(((path_reef_full_rate/10) * (2019-(1981-1))), 2) # multiply number of years by the yearly rate for total warming
 
 
-### Caribbean Reefs (1990-2020)
+### Caribbean Reefs (1987-2019)
 
 ## Rate of warming
-path_sst_sub <- subset(path_sst, year >= 1990) # subset data for 1990-2020 only
-path_reef_sub_lm <- lm(sst ~ year, data = path_sst_sub) # regression of temperature and year to calculate rate of warming (since 1990)
+path_sst_sub <- subset(path_sst, year >= 1987) # subset data for 1987-2019 only
+path_reef_sub_lm <- lm(sst ~ year, data = path_sst_sub) # regression of temperature and year to calculate rate of warming (since 1987)
 path_reef_sub_rate <- round(path_reef_sub_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
 
 ## Total C
-path_reef_sub_value <- round(((path_reef_sub_rate/10) * 31), 2) # multiply number of years by the yearly rate for total warming
+path_reef_sub_value <- round(((path_reef_sub_rate/10) * (2019-(1987-1))), 2) # multiply number of years by the yearly rate for total warming
 
 ```
 
@@ -1488,14 +1652,15 @@ path_reef_sub_value <- round(((path_reef_sub_rate/10) * 31), 2) # multiply numbe
 
 table_S2 <- data.frame("Temperature parameter" = c("Caribbean Basin (°C per decade)", "Caribbean Basin (total °C for period)", "Caribbean Reefs (°C per decade)", "Caribbean Reefs (total °C for period)"),
                        "HadISST (1871-2020)" = c(had_basin_full_rate, had_basin_full_value, had_reef_full_rate, had_reef_full_value),
-                       "HadISST (1990-2020)" = c(had_basin_sub_rate, had_basin_sub_value, had_reef_sub_rate, had_reef_sub_value),
+                       "HadISST (1981-2020)" = c(had_basin_sub_81_rate, had_basin_sub_81_value, had_reef_sub_81_rate, had_reef_sub_81_value),
+                       "HadISST (1987-2020)" = c(had_basin_sub_87_rate, had_basin_sub_87_value, had_reef_sub_87_rate, had_reef_sub_87_value), 
                        "Pathfinder (1981-2019)" = c(path_basin_full_rate, path_basin_full_value, path_reef_full_rate, path_reef_full_value),
                        "Pathfinder (1990-2019)" = c("NA", "NA", path_reef_sub_rate, path_reef_sub_value)
 )
 
 
 # View the completed 
-kable(table_S2, booktabs = TRUE, row.names = FALSE, col.names = c("Temperature parameter", "HadISST (1871-2020)", "HadISST (1990-2020)", "Pathfinder (1981-2019)", "Pathfinder (1990-2019)")) %>% 
+kable(table_S2, booktabs = TRUE, row.names = FALSE, col.names = c("Temperature parameter", "HadISST (1871-2020)", "HadISST (1981-2020)", "HadISST (1987-2020)", "Pathfinder (1981-2019)", "Pathfinder (1987-2019)")) %>% 
   kable_styling(font_size = 12, full_width = FALSE)
 
 ```
