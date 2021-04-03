@@ -2,7 +2,7 @@
 
 <img src="https://user-images.githubusercontent.com/45176386/113480898-bfc60c00-9464-11eb-9a95-00af8f80c9ea.png" width = "700" />
 
-**GitHub repository containing data and code accompanying the Caribbean warming and MHW manuscript (Bove et al XXX; DOI: XXX)**
+GitHub repository containing data and code accompanying the Caribbean warming and MHW manuscript (Bove et al XXX; DOI: XXX)
 
 **Authors:** Colleen B. Bove, Laura Mudge & John F Bruno
 
