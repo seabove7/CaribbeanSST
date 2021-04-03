@@ -282,7 +282,7 @@ ggplot() +
   scale_colour_manual("Ecoregion", values = pal, labels = eco_labs) +
   ylab("") +
   xlab("") +
-  ggsave("figures/Manuscript_figs/Fig1_ReefMap.pdf", width = 8, height = 3.5)
+  ggsave("figures/Manuscript/Fig1_ReefMap.pdf", width = 8, height = 3.5)
 
 ```
 
@@ -568,7 +568,8 @@ had_year_plot <- ggplot() +
   geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.35) + # max sst
   geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.35) + # min sst
   geom_line(data = had_predict_df, aes(x = year, y = response)) + # the predicted GAM curve (modelled above)
-  coord_cartesian(xlim = c(1870, 2020)) 
+  coord_cartesian(xlim = c(1870, 2020))  +
+  ggsave("figures/Supplemental/Bove_SST_abstract_image.png", width = 6, height = 3.75)
 
 ```
 
@@ -576,7 +577,7 @@ had_year_plot <- ggplot() +
 
 # Saves the manuscript version of the HadISST historic SST
 plot_grid(had_month_plot, had_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
-  ggsave("figures/Manuscript_figs/Fig2_SST_trends.pdf", width = 6, height = 7.5)
+  ggsave("figures/Manuscript/Fig2_SST_trends.pdf", width = 6, height = 7.5)
 
 ```
 
@@ -735,7 +736,7 @@ ggplot() +
   scale_y_continuous(breaks = seq(20, 32, 2), limits = c(20, 32)) +
   facet_wrap(~ ecoregion, ncol = 2, scales = "free_y") +
   geom_text(data = ecoregion_year_mean, aes(x = -Inf, y = Inf, label = lab, group = ecoregion), fontface = "bold", size = 4.5, hjust = -0.5, vjust = 1.4) +
-  ggsave("figures/Manuscript_figs/Fig3_Ecoregion_SST_trends.pdf", width = 7, height = 8)
+  ggsave("figures/Manuscript/Fig3_Ecoregion_SST_trends.pdf", width = 7, height = 8)
 
 ```
 
@@ -829,7 +830,7 @@ ggplot() +
   geom_line(data = had_gam_slope, aes(x = year, y = value, colour = type), lwd = 0.75) +
   scale_colour_manual(values = c("#4575b4", "#d73027")) +
   coord_cartesian(xlim = c(1870, 2020))  +
-  ggsave("figures/Supplemental_figs/FigS2_HadISST_GAM_slopes.pdf", width = 6, height = 3.75)
+  ggsave("figures/Supplemental/FigS2_HadISST_GAM_slopes.pdf", width = 6, height = 3.75)
 
 ```
 
@@ -1209,7 +1210,7 @@ path_year_plot <- ggplot() +
 
 # Saves the manuscript version of the Pathfinder historic SST
 plot_grid(path_month_plot, path_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
-  ggsave("figures/Supplemental_figs/FigS3_Pathfinder_SST_trends.pdf", width = 6, height = 7.5)
+  ggsave("figures/Supplemental/FigS3_Pathfinder_SST_trends.pdf", width = 6, height = 7.5)
 
 ```
 
@@ -1245,7 +1246,7 @@ combo_plot <- ggplot() +
   ggtitle("Caribbean coral reefs historic SST trends") +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
   coord_cartesian(xlim = c(1870, 2020)) +
-  ggsave("figures/Supplemental_figs/FigS4_Both_SST_trends.pdf", width = 6, height = 4)
+  ggsave("figures/Supplemental/FigS4_Both_SST_trends.pdf", width = 6, height = 4)
 
 ggplotly(combo_plot)
 
@@ -1258,7 +1259,7 @@ Comparison of HadISST (1871-2020) and Pathfinder (1981-2019) SST recorded on Car
 
 ### Figure S5
 
-![](figures/Supplemental_figs/Ecoregion_MapSST.png)
+![](figures/Supplemental/Ecoregion_MapSST.png)
 
 Historic SST trends on coral reefs within Caribbean ecoregions (1871 - 2020) with corresponding reef locations (see Figures 1, 3 in the main text). The colour of each reef location and box around long-term SST (HadISST) plots represent the designated ecoregion. Plots depict SST data with GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the mean SST over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean for the A) Bahamian, B) Eastern Caribbean, C) Floridian, D) Greater Antilles, E) Gulf of Mexico, F) Southern Caribbean, G) Southwestern Caribbean, and H) Western Caribbean ecoregions. 
 
@@ -1290,7 +1291,7 @@ had_gif <- had_plot_gif +
   shadow_mark(alpha = 0.1, size = 0.5)
 
 animate(had_gif, fps = 10, nframes = 300, end_pause = 2, width = 650, height = 400)
-anim_save("figures/Supplemental_figs/HadISST.gif")
+anim_save("figures/Supplemental/HadISST.gif")
 
 ```
 
@@ -1453,7 +1454,7 @@ mhw_pval_markdown <- ggplot(MHW_trends, aes(x = lon, y = lat)) +
 
 ### Combined plots
 Figure4 <- cowplot::plot_grid(path_map, map_slope, labels = c("A", "B"), label_size = 18) +
-  ggsave("figures/Manuscript_figs/Fig4_SST_MHW_map.pdf", width = 14.5, height = 5)
+  ggsave("figures/Manuscript/Fig4_SST_MHW_map.pdf", width = 14.5, height = 5)
 
 # markdown version
 cowplot::plot_grid(path_map_markdown, mhw_map_markdown, labels = c("A", "B"))
@@ -1481,7 +1482,7 @@ cowplot::plot_grid(path_map_markdown, mhw_map_markdown, labels = c("A", "B"))
 
 ## Combined p values:
 FigureS5 <- cowplot::plot_grid(path_pval_map, map_p, align = "hv", labels = c("A", "B")) +
-  ggsave("figures/Supplemental_figs/FigS6_SST_MHW_significance_map.pdf", width = 14.5, height = 5)
+  ggsave("figures/Supplemental/FigS6_SST_MHW_significance_map.pdf", width = 14.5, height = 5)
 
 # markdown version of plot
 cowplot::plot_grid(path_pval_markdown, mhw_pval_markdown, align = "hv", labels = c("A", "B")) 
@@ -1549,7 +1550,7 @@ had_pval_map <- ggplot() +
 ```{r HadISST full SST map combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
 plot_grid(had_map, had_pval_map, labels = c("A", "B")) +
-  ggsave("figures/Supplemental_figs/FigS7_HadISST_map.pdf", width = 14, height = 5)
+  ggsave("figures/Supplemental/FigS7_HadISST_map.pdf", width = 14, height = 5)
 
 ```
 
@@ -1613,7 +1614,7 @@ had_pval_map_sub <- ggplot() +
 ```{r HadISST SST map subset combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
 plot_grid(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
-  ggsave("figures/Supplemental_figs/FigS8_HadISST_subset_map.pdf", width = 14, height = 5)
+  ggsave("figures/Supplemental/FigS8_HadISST_subset_map.pdf", width = 14, height = 5)
 
 ```
 
