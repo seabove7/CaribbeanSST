@@ -1,4 +1,5 @@
-![Bove_SST_abstract_image](https://user-images.githubusercontent.com/45176386/113480898-bfc60c00-9464-11eb-9a95-00af8f80c9ea.png | width = "100")
+<img src="https://user-images.githubusercontent.com/45176386/113480898-bfc60c00-9464-11eb-9a95-00af8f80c9ea.png" width = "700" />
+
 # CaribbeanSST
 
 **GitHub repository containing data and code accompanying the Caribbean warming and MHW manuscript (Bove et al XXX; DOI: XXX)**
