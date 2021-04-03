@@ -2,9 +2,10 @@
 title: 'One Hundred and Fifty Years of Warming on Caribbean Coral Reefs'
 output:
  rmarkdown::html_document:
-    theme: Leonids
+    theme: yeti
     toc: yes
     toc_float: yes
+    highlight: tango
 ---
 
 ```{r knit options, include=FALSE}
@@ -136,13 +137,15 @@ MHW_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/OISST_
 
 #### Colleen B. Bove^1,2^*, Laura Mudge^1,3^, and John F. Bruno^1^
 
+<br/>
+
 ^1^ The Department of Biology, The University of North Carolina at Chapel Hill, Chapel Hill, North Carolina, 27599-3280 USA
 
 ^2^ The Department of Biology, Boston University, Boston, Massachusetts, 02215 USA
 
 ^3^ Integral Consulting Inc., Annapolis, Maryland 21401 USA
 
-* Corresponding author: colleenbove@gmail.com
+*Corresponding author: colleenbove@gmail.com
 
 <br/>
 
@@ -743,9 +746,6 @@ ggplot() +
 
 ### Figure S2
 
-
-
-
 ```{r calculate HadISST GAM slope significance}
 
 ## Source the required functions written by Gavin Simpson for calculating significant slopes based on first derivative of GAM
@@ -825,7 +825,7 @@ ggplot() +
   geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.35) + # min sst
   geom_rect(aes(ymin = -Inf, ymax = Inf, xmin = 1987, xmax = Inf), colour = 'black', fill = "#fee090", alpha = 0.2) +
   geom_text(aes(x = 1992, y = 23.9, label = "1987"), size = 3) +
-  geom_line(data = had_predict_df, aes(x=year, y=response)) +
+  geom_line(data = had_predict_df, aes(x=year, y=response), lwd = 0.75) +
   geom_line(data = had_gam_slope, aes(x = year, y = value, colour = type), lwd = 0.75) +
   scale_colour_manual(values = c("#4575b4", "#d73027")) +
   coord_cartesian(xlim = c(1870, 2020))  +
@@ -833,8 +833,112 @@ ggplot() +
 
 ```
 
-
 Historic SST trend on Caribbean coral reefs (1871–2020). Long-term SST records (HadISST) on Caribbean coral reefs depicting significant changes in warming rate based on the first derivative of the GAM modelled slope. The GAM smoothed annual mean SST time is represented by the black line with significantly positive (red) or negative (blue) identified over the curve. The most recent significant warming event began in 1987 and is highlighted in the yellow box. The annual maximum (red line) and annual minimum (blue line) SST are also depicted, along with the overall mean SST for all sites over the entire period (27.3 °C; grey dashed line). The grey ribbon represents the 95% confidence interval around the true annual SST mean through time.
+
+
+```{r ecoregion GAM slope significance}
+
+### This is modified from above to determine the inflection point per ecoregion
+
+# drop NA's and make ecoregion a factor for GAM using the HadISST data per ecoregion
+eco_gam_month <- ecoregion_sst %>% 
+  drop_na(mean_sst) %>% # drop all NA values
+  mutate(ecoregion = factor(ecoregion)) 
+
+# dataframe to populate with slopes
+eco_gam_slope <- data.frame("year" = integer(),
+                            "value" = numeric(),
+                            "ecoregion" = factor())
+
+# dataframe to populate with predicted values
+eco_predict_df_final <- data.frame(year = integer(),
+                             month = integer(),
+                             ecoregion = factor(),
+                             mean_sst = numeric(),
+                             response = numeric(),
+                             lwr = numeric(),
+                             upr = numeric(),
+                             incr = numeric())
+
+## forloop to model GAM per ecoregion and then calculate significant increases in slope (warming)
+for(e in levels(eco_gam_month$ecoregion)) {
+  subset_ecoreg <- eco_gam_month[eco_gam_month$ecoregion == e,]
+  eco_mod <- gam(mean_sst ~ s(year, bs = 'cr', k = 9) + s(month, bs = 'cc', k = 12), data = subset_ecoreg)
+  eco_gam_pred <- predict.gam(eco_mod, type = "response", se.fit = TRUE, exclude = s(month))
+  eco_predict_df <- cbind(subset_ecoreg, response = eco_gam_pred$fit, lwr = eco_gam_pred$fit - 2 * eco_gam_pred$se.fit, upr = eco_gam_pred$fit + 2 * eco_gam_pred$se.fit)
+  
+  ## Derivative calculation (using the ecoISST GAM eco_modelled above (eco_mod))
+  m_terms <- attr(terms(eco_mod), "term.labels") # pull out the eco_model term labels (here, "year" and "month")
+  newD <- data.frame(model.frame(eco_mod)[, m_terms, drop = FALSE]) # creates new dataframe of the terms identified above
+  X0 <- predict(eco_mod,newD, type = "lpmatrix") # predict returning matrix of linear predictors from eco_model derivatives
+  eps <- 1e-7 # set finite difference interval
+  newD$year <- newD$year + eps ## shift the evaluation mesh
+  X1 <- predict(eco_mod, newD, type = "lpmatrix")
+  Xp <- (X1 - X0) / eps
+  t_labs <- attr(eco_mod$terms, "term.labels") # number of smooth terms
+  nt <- length(t_labs)
+  
+  ## forloop to run through smooth terms and calculate derivative and SE
+  lD <- vector(mode = "list", length = nt) # create empty list to hold the derivatives
+  names(lD) <- t_labs # rename with the smoothing terms
+  for(i in seq_len(nt)) {
+    Xi <- Xp * 0
+    want <- grep(t_labs[i], colnames(X1))
+    Xi[, want] <- Xp[, want]
+    df <- Xi %*% coef(eco_mod)
+    df.sd <- rowSums(Xi %*% eco_mod$Vp * Xi)^.5
+    lD[[i]] <- list(deriv = df, se.deriv = df.sd)
+  }
+  
+  ## eco_modify the lD object created above
+  class(lD) <- "Deriv" # change the class to 'Deriv'
+  lD$gamModel <- eco_mod # add GAM
+  lD$eps <- eps # add eps (defined above)
+  newD$year <- newD$year - eps # eco_modify year by eps
+  lD$eval <- newD # add eco_modified year
+  
+  # confint and signifD are sourced from GSimpson_functions.R
+  # signifD is commented out and regions of significance are calculated manually to allow plotting +/- intervals in different colors 
+  CI <- confint(lD, term = 'year', alpha = 0.05) # calculate upper and lower 95% CI (alpha = 0.05) of term "year"
+  sig <- data.frame(up = CI$year$upper, low = CI$year$lower, seq = seq(1:length(CI$year$upper))) # create a dataframe of the upper/lower CI
+  incr <- sig[sig$low > 0,] # dataframe with all rows with CI greater than 0 (significant increase)
+  eco_predict_df$incr <- NA # adds columns with NAs for 'incr' and 'decr' to the predicted dataframe
+  eco_predict_df$incr[incr$seq] <- 1 # replaces NA with 1 in 'incr' column when CI is significantly increasing
+  
+  ## Create a dataframe of significant increasing or decreasing slope values to overlay GAM curve
+  change_yrs <- data.frame(year = eco_predict_df$year[which(eco_predict_df$incr == 1)],
+                           y = as.numeric(eco_predict_df$response[which(eco_predict_df$incr == 1)]))
+  change_yrs2 <- change_yrs[!duplicated(change_yrs$year),]
+  change_slope <- expand.grid(min(change_yrs2$year):max(change_yrs2$year))
+  change_slope$val <- apply(change_slope, 1, function(x) if (nrow(subset(change_yrs2, year == x[1]))) subset(change_yrs2, year == x[1])$y else NA)
+  change_slope$ecoregion <- rep(e, nrow(change_slope))
+  names(change_slope) <- c("year", "value", "ecoregion")
+  
+  eco_gam_slope <- rbind(eco_gam_slope, change_slope)
+  eco_predict_df_final <- rbind(eco_predict_df_final, data.frame(eco_predict_df))
+  
+}
+
+
+## Plots each individual GAM per ecoregion with highlighted regions of significant warming as calculated above. This plot is not in the manuscipt at present.
+ecoregion_sig_slope_plot <- ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 30, hjust = 0.8), text = element_text(size = 14)) +
+  geom_segment(data = ecoregion_year_mean, aes(y = mean, yend = mean, x = 1870, xend = 2020), colour = "darkgrey", linetype = 2) +
+  geom_ribbon(data = ecoregion_sst_annual, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.1, linetype = 1, size = 0.2) + 
+  scale_x_continuous(name = "", breaks = seq(1880, 2020, 20)) +
+  ylab('SST (°C)') +
+  geom_line(data = ecoregion_sst_annual, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.35) +
+  geom_line(data = ecoregion_sst_annual, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.35) + 
+  coord_cartesian(xlim = c(1870, 2020)) +
+  scale_y_continuous(breaks = seq(20, 32, 2), limits = c(20, 32)) +
+  facet_wrap(~ ecoregion, ncol = 2, scales = "free_y") +
+  geom_line(data = eco_predict_df_final, aes(x=year, y=response), colour = "black") +  
+  geom_line(data = eco_gam_slope, aes(x = year, y = value), lwd = 0.75, colour = "#d73027") +
+  geom_text(data = ecoregion_year_mean, aes(x = -Inf, y = Inf, label = lab, group = ecoregion), fontface = "bold", size = 4.5, hjust = -0.5, vjust = 1.4)
+
+```
+
 
 <br/>
 
@@ -1526,12 +1630,12 @@ plot_grid(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
 **Table S1.** Marine heatwave properties examined in this study
 
 | Metric | Units | Description  |
-|--------|:------|:-------------|
+|--------|:------------|:--------------------------------------------|
 | Frequency | Number of events | Number of discrete mhw events |
 | Total MHW days | days | The total number of days a location experienced a MHW per year |
 | Duration | days | The number of days between the start and end date of each distinct MHW event |
 | Peak intensity | °C | The maximum temperature, above the seasonal varying climatological mean, reached during the MHW event |  
-| Onset rate | °C/day | “Rate of temperature change between onset date and date of peak intensity” |
+| Onset rate | °C per day | “Rate of temperature change between onset date and date of peak intensity” |
 | Return time | days | The number of days elapsed since a previous mhw event in that location |
 
 
@@ -1579,7 +1683,7 @@ had_basin_sub_87_value <- round(((had_basin_sub_87_rate/10) * (2020-(1987-1))), 
 ### Caribbean Reefs (1871-2020)
 
 ## Rate of warming
-had_sst <- had_gam_df # renaming the GAM dataframe for analyses below
+had_sst <- had_gam_df %>% separate(date, c("year", "month","day"), convert = TRUE) # create year, month, and day column columns
 had_reef_full_lm <- lm(sst ~ year, data = had_sst) # regression of temperature and year to calculate rate of warming
 had_reef_full_rate <- round(had_reef_full_lm$coefficients[2]*10, 2) # extract the slope of rate and multiply it by 10 for decade rate
 
@@ -1694,9 +1798,15 @@ eco_sst_path_df$month2 <- factor(eco_sst_path_df$month) # make a month as a fact
 ```{r Pathfinder extract warming rate from ecoregions}
 
 region_names <- levels(factor(eco_sst_path_df$ecoregion)) # pull list of the different ecoregions
+
 # make a dataframe of ecoregion and the year of warming increase
-ecoregion_warm_year <- data.frame(ecoregion = region_names,
-                                  warm_year = c(1986, 1985, 1981, 1986, 1981, 1981, 1981, 1993))
+ecoregion_warm_year <- eco_gam_slope %>% # this is the dataframe from the GAM per ecoregion section
+  filter(year >= 1981) %>% # filter for data since 1981 to match Pathfinder timeframe
+  group_by(ecoregion) %>% # get a value by ecoregion
+  slice(which.min(value)) %>% # pull the minimum value of SST (this will be the first year of the increase)
+  select(ecoregion, year) %>% # select for just the ecoregion and year of warming
+  rename(warm_year = year)
+
 
 # join the warming year to the SST dataframe
 eco_sst_path_df <- eco_sst_path_df %>% 
@@ -1710,18 +1820,22 @@ ecoregion_slope <- data.frame(ecoregion = character(),
                               up_CI = numeric())
 
 # forloop that will calculate linear rate of warming per region along with confidence intervals
-for (region in 1:length(region_names)) {
+for (r in 1:length(region_names)) {
   
-  ecoregion_subset <- subset(eco_sst_path_df, ecoregion == ecoregion_warm_year[region, 1]) # subset for selected ecoregion
-  ecoregion_subset <- subset(ecoregion_subset, year >= ecoregion_warm_year[region, 2]) # subset for year of warming
+  region <- region_names[r]
+  warm_yr <- ecoregion_warm_year[[r, 2]]
+  
+  ecoregion_subset <- eco_sst_path_df %>% 
+    filter(ecoregion == region & year >= warm_yr)
+  
   ecoregion_lm <- lm(sst ~ year, data = ecoregion_subset) # perform regression of sst through time
   slope <- round(ecoregion_lm[["coefficients"]][["year"]], 3) # extract the slope of SST over time
   lw_CI <- round(confint(ecoregion_lm, level = 0.95)[2,1], 4) # extract the lower CI 
   up_CI <- round(confint(ecoregion_lm, level = 0.95)[2,2], 4) # extract the upper CI 
   
   # add data to dataframe and convert rates to per decade 
-  slope_df <- data.frame(ecoregion = ecoregion_warm_year[region, 1],
-                         warm_year = ecoregion_warm_year[region, 2],
+  slope_df <- data.frame(ecoregion = region,
+                         warm_year = warm_yr,
                          slope = (slope * 10),
                          lw_CI = (lw_CI * 10),
                          up_CI = (up_CI * 10))
