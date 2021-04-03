@@ -282,7 +282,7 @@ ggplot() +
   scale_colour_manual("Ecoregion", values = pal, labels = eco_labs) +
   ylab("") +
   xlab("") +
-  ggsave("figures/Manuscript_figs/Fig1_ReefMap_map.pdf", width = 8, height = 3.5)
+  ggsave("figures/Manuscript_figs/Fig1_ReefMap.pdf", width = 8, height = 3.5)
 
 ```
 
