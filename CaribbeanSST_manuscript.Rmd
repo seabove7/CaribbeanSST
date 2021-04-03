@@ -1305,6 +1305,9 @@ Long-term SST records (HadISST) on Caribbean coral reefs depicting mean monthly 
 
 ### <span style="color: #0072B2;">**Figure 4**</span>
 
+*All Marine Heatwave analyses were performed by Laura Mudge (GitHub: [Lmudge13](https://github.com/Lmudge13))*
+Laura's code/analyses are included in this script and identified within code chunks when pulled from her original work.
+
 ```{r Pathfinder SST slope map}
 
 ### Pathfinder SST slope map
@@ -1382,6 +1385,8 @@ path_pval_markdown <- ggplot() +
 ```
 
 ```{r OISST MHW frequency map}
+
+### OISST MHW map code modified from Laura Mudge's original analysis.
 
 ### MHW slope map
 MHW_trends <- read_rds(MHW_path) # load in trend data
