@@ -49,3 +49,4 @@ GitHub repository containing data and code accompanying the Caribbean warming an
       * FigS9_MHW_metrics_ecoregions.pdf
       * HadISST.gif
 
+**NOTE:** The original OISST database compilation and MHW analyses were all performed by Laura Mudge (GitHub: [Lmudge13](https://github.com/Lmudge13)). This repository includes the previously compiled/calculated OISST and MHW parameters for simplicity. To find the code and data used to compile the datasets for Caribbean MHWs in this repository, please visit [Laura's GitHub](https://github.com/Lmudge13) or email me (colleenbove@gmail.com).
