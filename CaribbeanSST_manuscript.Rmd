@@ -23,7 +23,7 @@ opts <- options(knitr.kable.NA = "")
 ```{r load libraries}
 
 ### Used packages that need to be installed to run code:
-# install.packages("sf", "ncdf4", "ggrepel", "raster", "viridis", "maptools", "rgdal", "ggplot2", "cowplot", "tidyverse", "rnaturalearth", "xts", "RColorBrewer", "tidyr", "dplyr", "binr", "fields", "gganimate", "sp", "mgcv", "plotly", "grDevices", "repmis", "foreach", "kableExtra", "splines", "gridExtra", "Hmisc", "ggpubr")
+# install.packages("sf", "ncdf4", "ggrepel", "raster", "viridis", "maptools", "rgdal", "ggplot2", "cowplot", "tidyverse", "rnaturalearth", "xts", "RColorBrewer", "tidyr", "dplyr", "binr", "fields", "gganimate", "sp", "mgcv", "plotly", "grDevices", "repmis", "foreach", "kableExtra", "splines", "gridExtra", "Hmisc", "ggpubr", "sjPlot", "broom", "modelr", "performance", "fmsb")
 
 # library(devtools)
 # devtools::install_github("NCAR/fields")
@@ -59,6 +59,11 @@ library(repmis)
 library(splines)
 library(gridExtra)
 library(ggpubr)
+library(sjPlot)
+library(broom)
+library(modelr)
+library(performance)
+library(fmsb)
 
 ```
 
@@ -134,6 +139,10 @@ Pathfinder_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/Cari
 ## OISST_MHW_carib.Rda: 
 # Dropbox link: 
 MHW_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/OISST_MHW_carib.Rda"
+
+## mhw_carib.csv
+# Dropbox link: 
+MHW_carib_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/mhw_carib.csv"
 
 ```
 
@@ -1482,20 +1491,17 @@ cowplot::plot_grid(path_map_markdown, mhw_map_markdown, labels = c("A", "B"))
 
 ### <span style="color: #0072B2;">**Figure 5**</span>
 
-```{r}
+```{r Caribbean MHW data manipulation}
 
 ### Caribbean coral reef MHW metrics analyses modified from Laura Mudge's original analysis.
 # Here, I am just working with Laura's compiled MHW data for the Caribbean 
 # Laura's original OISST MHW analysis of the Caribbean can be found at her GitHub repository: https://github.com/Lmudge13/MHW_spatial_correlation
 
+## Read in dataframe of MHWs across the Caribbean (this is too big to host on GitHub so using dropbox path)
+mhw_carib <- read_csv(MHW_carib_path)
 
 
-# MHW data for the entire basin (not just where coral reefs are)
-
-#mhw_carib <- read_csv("/Users/colleen/Dropbox/Git/Laura_Files/mhw_carib_backup_july312019.csv")
-mhw_carib <- read_csv("/Users/colleen/Dropbox/Git/Laura_Files/mhw_carib.csv")
-
-# Add a column for year & calculate return time:
+## Add a column for year & calculate return time:
   # year = year of MHW event
   # days_since_last = return time in number days since last MHW event ended
   # grid_ID= id variable for the lat/lon grid
@@ -1510,8 +1516,9 @@ mhw_carib <- mhw_carib %>%
     #transform current lon to lon 365 and create lon col that has longitude in the E-W format (values should be between -100 and -55)
   rename(lon365=lon) %>%
   mutate(lon= lon365-360) 
-    
-# filter out areas in Pacific (near panama, confirmed lat/lon in code chunk below)
+  
+  
+## filter out areas in Pacific (near panama, confirmed lat/lon in code chunk below)
 pac_range <-  mhw_carib %>% 
   filter(between(lon, -84, -78) & between(lat, 7, 8.5) |
            between(lon, -84, -82.5) & between(lat, 8.5, 9.5) | 
@@ -1520,9 +1527,7 @@ pac_range <-  mhw_carib %>%
 mhw_carib <- anti_join(mhw_carib, pac_range)
 
     
-
-# Create a summary df of MHW metrics per year for each lat/lon:
-
+## Create a summary df of MHW metrics per year for each lat/lon:
 mhw_sum <- mhw_carib %>%
   group_by(lat, lon, year) %>%
   mutate(total_MHW_days = sum(duration),
@@ -1534,11 +1539,13 @@ mhw_sum <- mhw_carib %>%
          ) %>%
   distinct(lat, lon, unique_ID, year, total_MHW_days, total_events, avg_onset, avg_duration, avg_intensity, avg_rt)
 
+```
 
+```{r reef-specific MHW data manipulation}
 
 # MHW on REEFS 9/13/2019: this will have mhw data with ecoregion and EEZ info
 #mhw_carib_reefs <- read_csv("/Users/colleen/Dropbox/Git/CaribbeanSST/data/ReefData/CaribbeanReef_points.csv")
-mhw_carib_reefs <- read_csv("mhw_carib_reefs.csv")
+mhw_carib_reefs <- read_csv("data/ReefData/MHW_reefs.csv")
 
 mhw_carib_reefs <- mhw_carib_reefs %>%
   filter(ecoregion != "Brazil" & ecoregion != "Bermuda")
@@ -1594,17 +1601,16 @@ mhw_pixel <- mhw_pixel %>%
 
 
 ## Create new ecoregion labels for MHW plots
-eco.labs <- c("Bahamas", "E. Carib", "Florida", "Antilles", "Gulf of Mexico", "S. Carib", "SW Carib", "W. Carib")
-names(eco.labs) <- c("Bahamian", "Eastern Caribbean", "Floridian", "Greater Antilles", "Gulf of Mexico", "Southern Caribbean", "Southwestern Caribbean", "Western Caribbean")
+eco_labs <- c("Bahamas", "E. Carib", "Florida", "Antilles", "Gulf of Mexico", "S. Carib", "SW Carib", "W. Carib")
+names(eco_labs) <- c("Bahamian", "Eastern Caribbean", "Floridian", "Greater Antilles", "Gulf of Mexico", "Southern Caribbean", "Southwestern Caribbean", "Western Caribbean")
 
 
 ```
 
 
+```{r MHW frequency assessment}  
 
-
-
-```{r frequency}  
+## Running a GLM because this is count data 
 
 # GLM model:
 pixel_frequency_glm <- glm(total_events ~ year, poisson(link = "log"), data = mhw_pixel %>% filter(!is.na(total_events)))
@@ -1617,13 +1623,17 @@ frequency_df <- mhw_pixel %>%
   add_predictions(pixel_frequency_glm, type = "response")
 
 # Diagnosis of model:
-check_model(pixel_frequency_glm)
+#check_model(pixel_frequency_glm)
 
 # make label of  R2 value for plot:
 freq_r2 <- NagelkerkeR2(pixel_frequency_glm)[[2]]
 freq_rlab <- paste("italic(R^2) == ", round(freq_r2, 4))
 
-# final plot (panel B in Figure 6)
+```
+
+```{r MHW frequency plot}
+
+## Create plot of MHW frequency for coral reefs
 plot_freq_pixel <- ggplot(data=frequency_df, aes(x= year, y= total_events)) +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
@@ -1633,28 +1643,13 @@ plot_freq_pixel <- ggplot(data=frequency_df, aes(x= year, y= total_events)) +
   annotate(geom = "text", size = 2.8, x = 1985, y = 10, label = freq_rlab, parse=TRUE, colour = "grey20") +
   expand_limits(x = c(1980, 2020)) +  
   labs(x="Year", y="Frequency")
-plot_freq_pixel
-
-
-## Modelling per ecoregion
-pixel_frequency_eco <- lme4::lmList(total_events ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(total_events)))
-summary(pixel_frequency_eco)
-
-plot_freq_region <- ggplot(frequency_df, aes(x=year, y=total_events)) + 
-  theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour="black", fill=NA, size=1), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
-  #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
-  stat_summary(fun="mean", geom= "point") +
-  stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", width=0) +
-  geom_smooth(method = "glm", se= TRUE, method.args = list(family= "poisson"), colour = "steelblue") +
-  expand_limits(x = c(1980, 2020)) +
-  labs(x="Year", y="Frequency")  +
-  facet_wrap(~ecoregion, nrow = 1)
-plot_freq_region
 
 ```
 
-```{r duration} 
+
+```{r MHW duration assessment} 
+
+## Running a regression for return time 
 
 # LM model:
 pixel_duration_lm <- lm(log(avg_duration) ~ year, data = mhw_pixel %>% filter(!is.na(avg_duration)))
@@ -1663,14 +1658,18 @@ tab_model(pixel_duration_lm, show.se = TRUE, show.ci = FALSE, show.stat = TRUE, 
 dur_mod <- tidy(pixel_duration_lm)
   
 # Diagnosis of model:
-check_model(pixel_duration_lm)
+#check_model(pixel_duration_lm)
 
 # make label of  R2 value for plot:
 dur_r2 <- summary(pixel_duration_lm)$r.squared
 dur_rlab <- paste("italic(R^2) == ", round(dur_r2, 4))
 
-# final plot (panel B in Figure 6)
-plot_dur_pixel <- ggplot(data=duration_df, aes(x= year, y= avg_duration)) +
+```
+
+```{r MHW duration plot}
+
+## Create plot of MHW duration for coral reefs
+plot_dur_pixel <- ggplot(data = mhw_pixel %>% filter(!is.na(avg_duration)), aes(x= year, y= avg_duration)) +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
   stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1), geom = "errorbar", width = 0) +
@@ -1679,28 +1678,13 @@ plot_dur_pixel <- ggplot(data=duration_df, aes(x= year, y= avg_duration)) +
   annotate(geom = "text", size = 2.8, x = 1985, y = 41, label = dur_rlab, parse=TRUE, colour = "grey20") +
   expand_limits(x = c(1980, 2020)) +  
   labs(x="Year", y="Duration (days)")
-plot_dur_pixel
-
-
-## Modelling per ecoregion
-pixel_duration_eco <- lme4::lmList(log(avg_duration) ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(avg_duration)))
-summary(pixel_duration_eco)
-
-plot_dur_region <- ggplot(duration_df, aes(x=year, y=avg_duration)) + 
-  theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour="black", fill=NA, size=1), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
-  #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
-  stat_summary(fun="mean", geom= "point") +
-  stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", width=0) +
-  geom_smooth(method = "glm", se= TRUE, method.args = list(family= "poisson"), colour = "steelblue") +
-  expand_limits(x = c(1980, 2020)) +
-  labs(x="Year", y="Duration (days)")  +
-  facet_wrap(~ecoregion, nrow = 1)
-plot_dur_region
 
 ```
 
-```{r rt} 
+
+```{r MHW return time assessment} 
+
+## Running a regression for return time 
 
 # LM model:
 pixel_rt_lm <- lm(log(avg_rt) ~ year, data = mhw_pixel %>% filter(!is.na(avg_rt)))
@@ -1709,14 +1693,18 @@ tab_model(pixel_rt_lm, show.se = TRUE, show.ci = FALSE, show.stat = TRUE, show.o
 rt_mod <- tidy(pixel_rt_lm)
 
 # Diagnosis of model:
-check_model(pixel_rt_lm)
+#check_model(pixel_rt_lm)
 
 # make label of  R2 value for plot:
 rt_r2 <- summary(pixel_rt_lm)$r.squared
 rt_rlab <- paste("italic(R^2) == ", round(rt_r2, 4))
 
-# final plot (panel C in Figure 6)
-plot_rt_pixel <- ggplot(data=rt_df, aes(x= year, y= avg_rt)) +
+```
+
+```{r MHW return time plot}
+
+## Create plot of MHW return time for coral reefs
+plot_rt_pixel <- ggplot(data = mhw_pixel %>% filter(!is.na(avg_rt)), aes(x= year, y= avg_rt)) +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) + 
   stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1), geom = "errorbar", width = 0) +
@@ -1725,50 +1713,9 @@ plot_rt_pixel <- ggplot(data=rt_df, aes(x= year, y= avg_rt)) +
   annotate(geom = "text", size = 2.8, x = 2015, y = 1400, label = rt_rlab, parse=TRUE, colour = "grey20") +
   expand_limits(x = c(1980, 2020)) +  
   labs(x="Year", y="Duration (days)")
-plot_rt_pixel
-
-
-## Modelling per ecoregion
-pixel_duration_eco <- lme4::lmList(log(avg_rt) ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(avg_rt)))
-summary(pixel_duration_eco)
-
-plot_rt_region <- ggplot(rt_df, aes(x=year, y=avg_rt)) + 
-  theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour="black", fill=NA, size=1), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
-  #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
-  stat_summary(fun="mean", geom= "point") +
-  stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", width=0) +
-  geom_smooth(method = "glm", se= TRUE, method.args = list(family= "poisson"), colour = "steelblue") +
-  expand_limits(x = c(1980, 2020)) +
-  labs(x="Year", y="Duration (days)")  +
-  facet_wrap(~ecoregion, nrow = 1)
-plot_rt_region
-
-
-## Just looking at return rates here:
-
-annual_rt_avg <- mhw_pixel %>% 
-  group_by(year) %>% 
-  summarize(mean = round(mean(avg_rt, na.rm = TRUE)))
-
-eco_rt_avg <- mhw_pixel %>% 
-  group_by(year, ecoregion) %>% 
-  summarize(mean = round(mean(avg_rt, na.rm = TRUE)))
-
-
-decade_eco_rt_avg <- mhw_pixel %>% 
-  select(year, ecoregion, avg_rt) %>% 
-  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
-  group_by(decade, ecoregion) %>% 
-  summarize(mean = mean(avg_rt, na.rm = TRUE))
-
-decade_rt_avg <- mhw_pixel %>% 
-  select(year, avg_rt) %>% 
-  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
-  group_by(decade) %>% 
-  summarize(mean = mean(avg_rt, na.rm = TRUE))
 
 ```
+
 
 ```{r combine and save MHW figure 5}
 
@@ -1778,7 +1725,10 @@ ggarrange(plot_freq_pixel, plot_dur_pixel, plot_rt_pixel, ncol = 3, labels = "AU
 
 ```
 
-```{r MHW decade values} 
+
+```{r MHW decade values, eval=FALSE, include=FALSE}
+
+## These are not included in the Rmarkdown document but are referenced in the text of the main manuscript
 
 ### Decade summaries
 # Mean frequency:
@@ -1960,9 +1910,75 @@ plot_grid(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
 
 ### Figure S9
 
-```{r}
+
+```{r MHW frequency by ecoregion}
+
+## Modelling per ecoregion
+pixel_frequency_eco <- lme4::lmList(total_events ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(total_events)))
+summary(pixel_frequency_eco)
+
+plot_freq_region <- ggplot(frequency_df, aes(x=year, y=total_events)) + 
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
+  #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
+  stat_summary(fun="mean", geom= "point", size = 1) +
+  stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", width=0) +
+  geom_smooth(method = "glm", se= TRUE, method.args = list(family= "poisson"), colour = "steelblue") +
+  expand_limits(x = c(1980, 2020)) +
+  labs(x="Year", y="Frequency")  +
+  facet_wrap(~ecoregion, nrow = 1)
+
 
 ```
+
+```{r MHW duration by ecoregion}
+
+## Modelling per ecoregion
+pixel_duration_eco <- lme4::lmList(log(avg_duration) ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(avg_duration)))
+summary(pixel_duration_eco)
+
+plot_dur_region <- ggplot(data = mhw_pixel %>% filter(!is.na(avg_duration)), aes(x = year, y = avg_duration)) + 
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
+  #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
+  stat_summary(fun="mean", geom= "point", size = 1) +
+  stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", width=0) +
+  geom_smooth(method = "glm", se= TRUE, method.args = list(family= "poisson"), colour = "steelblue") +
+  expand_limits(x = c(1980, 2020)) +
+  labs(x="Year", y="Duration (days)")  +
+  facet_wrap(~ecoregion, nrow = 1)
+
+```
+
+```{r MHW return time by ecoregion}
+
+## Modelling per ecoregion
+pixel_duration_eco <- lme4::lmList(log(avg_rt) ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(avg_rt)))
+summary(pixel_duration_eco)
+
+plot_rt_region <- ggplot(data = mhw_pixel %>% filter(!is.na(avg_rt)), aes(x = year, y = avg_rt)) + 
+  theme_bw() +
+  #theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), strip.text.x = element_blank(), axis.text.x = element_text(angle = 90)) +  
+  #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
+  stat_summary(fun="mean", geom= "point", size = 1) +
+  stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", width=0) +
+  geom_smooth(method = "glm", se= TRUE, method.args = list(family= "poisson"), colour = "steelblue") +
+  expand_limits(x = c(1980, 2020)) +
+  labs(x="Year", y="Duration (days)")  +
+  facet_wrap(~ecoregion, nrow = 1)
+
+```
+
+```{r combine and save MHWs by ecoregion for Fig S9}
+
+## Final combined MHW plot and save it
+ggarrange(plot_freq_region, plot_dur_region, plot_rt_region, ncol = 1, labels = "AUTO", heights = c(0.85, 0.75, 0.95)) +
+  ggsave("figures/Supplemental/FigS9_MHW_ecoregion_metrics.pdf", width = 12, height = 6)
+
+```
+
+
 
 MHW trends (1981 - 2018) across Caribbean coral reefs by ecoregion. Temperature data are based on OISST gridded data to determine frequency (number events per year), duration (number days per event), return time (number days per event) since the previous event, onset rate (°C per day) from start until peak intensity, peak intensity (°C), and total days reefs experience MHWs per year. Points denote annual mean values (±SD) and blue lines represent linear (lm or glm) trends within each ecoregion (see Figures 1, S5 for ecoregion locations). Frequency, duration, and return time across all Caribbean coral reefs are depicted in Figure 5 in the main text. 
 
