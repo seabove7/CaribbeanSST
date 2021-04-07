@@ -1480,7 +1480,7 @@ mhw_pval_markdown <- ggplot(MHW_trends, aes(x = lon, y = lat)) +
 ```{r combined SST and MHW maps}
 
 ### Combined plots
-Figure4 <- ggarrange(path_map, map_slope, labels = c("A", "B"), label_size = 18) +
+Figure4 <- ggarrange(path_map, map_slope, labels = c("A", "B")) +
   ggsave("figures/Manuscript/Fig4_SST_MHW_map.pdf", width = 14.5, height = 5)
 
 # markdown version
@@ -1620,8 +1620,8 @@ names(eco_labs) <- c("Bahamian", "Eastern Caribbean", "Floridian", "Greater Anti
 
 # GLM model:
 pixel_frequency_glm <- glm(total_events ~ year, poisson(link = "log"), data = mhw_pixel %>% filter(!is.na(total_events)))
-summary(pixel_frequency_glm)
-tab_model(pixel_frequency_glm, show.se = TRUE, show.ci = FALSE, show.stat = TRUE, show.obs = FALSE, transform = NULL, dv.labels = "Frequency")
+#summary(pixel_frequency_glm)
+#tab_model(pixel_frequency_glm, show.se = TRUE, show.ci = FALSE, show.stat = TRUE, show.obs = FALSE, transform = NULL, dv.labels = "Frequency")
 freq_mod <- tidy(pixel_frequency_glm)
 
 frequency_df <- mhw_pixel %>% 
@@ -1659,8 +1659,8 @@ plot_freq_pixel <- ggplot(data=frequency_df, aes(x= year, y= total_events)) +
 
 # LM model:
 pixel_duration_lm <- lm(log(avg_duration) ~ year, data = mhw_pixel %>% filter(!is.na(avg_duration)))
-summary(pixel_duration_lm)
-tab_model(pixel_duration_lm, show.se = TRUE, show.ci = FALSE, show.stat = TRUE, show.obs = FALSE, dv.labels = "Duration")
+#summary(pixel_duration_lm)
+#tab_model(pixel_duration_lm, show.se = TRUE, show.ci = FALSE, show.stat = TRUE, show.obs = FALSE, dv.labels = "Duration")
 dur_mod <- tidy(pixel_duration_lm)
   
 # Diagnosis of model:
@@ -1694,8 +1694,8 @@ plot_dur_pixel <- ggplot(data = mhw_pixel %>% filter(!is.na(avg_duration)), aes(
 
 # LM model:
 pixel_rt_lm <- lm(log(avg_rt) ~ year, data = mhw_pixel %>% filter(!is.na(avg_rt)))
-summary(pixel_rt_lm)
-tab_model(pixel_rt_lm, show.se = TRUE, show.ci = FALSE, show.stat = TRUE, show.obs = FALSE, dv.labels = "Return Time")
+#summary(pixel_rt_lm)
+#tab_model(pixel_rt_lm, show.se = TRUE, show.ci = FALSE, show.stat = TRUE, show.obs = FALSE, dv.labels = "Return Time")
 rt_mod <- tidy(pixel_rt_lm)
 
 # Diagnosis of model:
@@ -1718,12 +1718,12 @@ plot_rt_pixel <- ggplot(data = mhw_pixel %>% filter(!is.na(avg_rt)), aes(x= year
   geom_smooth(method = "lm", colour = "steelblue", size = 1) +
   annotate(geom = "text", size = 2.8, x = 2015, y = 1400, label = rt_rlab, parse=TRUE, colour = "grey20") +
   expand_limits(x = c(1980, 2020)) +  
-  labs(x="Year", y="Duration (days)")
+  labs(x="Year", y="Return Time (days)")
 
 ```
 
 
-```{r combine and save MHW figure 5}
+```{r combine and save MHW figure 5, fig.height = 3, fig.width = 10}
 
 ## Final combined MHW plot and save it
 ggarrange(plot_freq_pixel, plot_dur_pixel, plot_rt_pixel, ncol = 3, labels = "AUTO") +
@@ -1731,34 +1731,7 @@ ggarrange(plot_freq_pixel, plot_dur_pixel, plot_rt_pixel, ncol = 3, labels = "AU
 
 ```
 
-
-```{r MHW decade values, eval=FALSE, include=FALSE}
-
-## These are not included in the Rmarkdown document but are referenced in the text of the main manuscript
-
-### Decade summaries
-# Mean frequency:
-freq_decade_summary <- mhw_pixel %>% 
-  group_by(year, total_events) %>% 
-  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
-  group_by(decade) %>% 
-  summarise(mean_duration = mean(total_events, na.rm = TRUE))
-
-# Mean duration:
-duration_decade_summary <- mhw_pixel %>% 
-  group_by(year, avg_duration) %>% 
-  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
-  group_by(decade) %>% 
-  summarise(mean_duration = mean(avg_duration, na.rm = TRUE))
-
-# Mean return time:
-rt_decade_summary <- mhw_pixel %>% 
-  group_by(year, avg_rt) %>% 
-  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
-  group_by(decade) %>% 
-  summarise(mean_duration = mean(avg_rt, na.rm = TRUE))
-
-```
+**MHW trends (1981 - 2018) across Caribbean coral reefs.** Temperature data are based on OISST gridded data to determine A) marine heat wave (MHW) frequency (number events per year) with Nagelkerke pseudo R^2^; B) MHW duration (number days per event) with linear model R^2^ ; and C) return time (number days per event) since the previous MHW event with linear model R^2^ reported. Points denote annual mean values (±SD) and blue lines represent linear (lm or glm) trends. 
 
 ---
 
@@ -1921,7 +1894,7 @@ ggarrange(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
 
 ## Modelling per ecoregion
 pixel_frequency_eco <- lme4::lmList(total_events ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(total_events)))
-summary(pixel_frequency_eco)
+#summary(pixel_frequency_eco)
 
 plot_freq_region <- ggplot(frequency_df, aes(x=year, y=total_events)) + 
   theme_bw() +
@@ -1941,9 +1914,9 @@ plot_freq_region <- ggplot(frequency_df, aes(x=year, y=total_events)) +
 
 ## Modelling per ecoregion
 pixel_duration_eco <- lme4::lmList(log(avg_duration) ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(avg_duration)))
-summary(pixel_duration_eco)
+#summary(pixel_duration_eco)
 
-plot_dur_region <- ggplot(data = mhw_pixel %>% filter(!is.na(avg_duration)), aes(x = year, y = avg_duration)) + 
+plot_dur_region <- ggplot(data = mhw_pixel, aes(x = year, y = avg_duration)) + 
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
   #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
@@ -1960,31 +1933,86 @@ plot_dur_region <- ggplot(data = mhw_pixel %>% filter(!is.na(avg_duration)), aes
 
 ## Modelling per ecoregion
 pixel_duration_eco <- lme4::lmList(log(avg_rt) ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(avg_rt)))
-summary(pixel_duration_eco)
+#summary(pixel_duration_eco)
 
-plot_rt_region <- ggplot(data = mhw_pixel %>% filter(!is.na(avg_rt)), aes(x = year, y = avg_rt)) + 
+plot_rt_region <- ggplot(data = mhw_pixel, aes(x = year, y = avg_rt)) + 
   theme_bw() +
-  #theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), strip.text.x = element_blank(), axis.text.x = element_text(angle = 90)) +  
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
   #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
   stat_summary(fun="mean", geom= "point", size = 1) +
   stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", width=0) +
   geom_smooth(method = "glm", se= TRUE, method.args = list(family= "poisson"), colour = "steelblue") +
   expand_limits(x = c(1980, 2020)) +
-  labs(x="Year", y="Duration (days)")  +
+  labs(x="Year", y="Return Time (days)")  +
   facet_wrap(~ecoregion, nrow = 1)
 
 ```
 
-```{r combine and save MHWs by ecoregion for Fig S9}
+```{r MHW intensity by ecoregion}
 
-## Final combined MHW plot and save it
-ggarrange(plot_freq_region, plot_dur_region, plot_rt_region, ncol = 1, labels = "AUTO", heights = c(0.85, 0.75, 0.95)) +
-  ggsave("figures/Supplemental/FigS9_MHW_ecoregion_metrics.pdf", width = 12, height = 6)
+## Modelling per ecoregion
+pixel_maxint <- lme4::lmList(log(avg_maxint) ~ year | ecoregion, data=mhw_pixel %>% filter(!is.na(avg_maxint)))
+#summary(pixel_maxint)
+
+plot_int_region <- ggplot(data = mhw_pixel, aes(x = year, y = avg_maxint)) + 
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
+  #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
+  stat_summary(fun="mean", geom= "point", size = 1) +
+  stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", width=0) +
+  geom_smooth(method = "lm", se= TRUE, colour = "steelblue") +
+  expand_limits(x = c(1980, 2020)) +
+  labs(x="Year", y=expression(Intensity~(degree~C)))  +
+  facet_wrap(~ecoregion, nrow = 1)
+
+```
+
+```{r MHW onset rate by ecoregion}
+
+## Modelling per ecoregion
+pixel_onset <- lme4::lmList(log(avg_onset) ~ year | ecoregion, data=mhw_pixel %>% filter(!is.na(avg_onset)))
+#summary(pixel_onset)
+
+plot_onset_region <- ggplot(data = mhw_pixel, aes(x = year, y = avg_onset)) + 
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), strip.text.x = element_blank(), axis.title.x=element_blank(), axis.text.x=element_blank()) +
+  #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
+  stat_summary(fun="mean", geom= "point", size = 1) +
+  stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", width=0) +
+  geom_smooth(method = "lm", se= TRUE, colour = "steelblue") +
+  expand_limits(x = c(1980, 2020)) +
+  labs(x="Year", y = expression(Onset~rate~(degree~C/day)))  +
+  facet_wrap(~ecoregion, nrow = 1)
+
+```
+
+```{r MHW total days by ecoregion}
+
+## Modelling per ecoregion
+pixel_days_eco <- lme4::lmList(total_MHW_days ~ year | ecoregion, family = poisson(link = "log"), data = mhw_pixel %>% filter(!is.na(total_MHW_days)))
+#summary(pixel_days_eco)
+
+plot_totalDays_region <- ggplot(data = mhw_pixel %>% filter(!is.na(total_MHW_days)), aes(x = year, y = total_MHW_days)) + 
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), strip.background = element_blank(), strip.text.x = element_blank(), axis.text.x = element_text(angle = 90)) + 
+  #geom_point(colour = "grey", alpha = 0.15, position = position_jitter()) +
+  stat_summary(fun="mean", geom= "point", size = 1) +
+  stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", width=0) +
+  geom_smooth(method = "glm", se= TRUE, method.args = list(family= "poisson"), colour = "steelblue") +
+  expand_limits(x = c(1980, 2020)) +
+  labs(x="Year", y = "Total Days")  +
+  facet_wrap(~ecoregion, nrow = 1)
 
 ```
 
 
+```{r combine and save MHWs by ecoregion for Fig S9, fig.width = 12, fig.height = 10}
+
+## Final combined MHW plot and save it
+ggarrange(plot_freq_region, plot_dur_region, plot_rt_region, plot_int_region, plot_onset_region, plot_totalDays_region, ncol = 1, heights = c(0.85, 0.75, 0.75, 0.75, 0.75, 0.95)) +
+  ggsave("figures/Supplemental/FigS9_MHW_ecoregion_metrics.pdf", width = 16, height = 12)
+
+```
 
 MHW trends (1981 - 2018) across Caribbean coral reefs by ecoregion. Temperature data are based on OISST gridded data to determine frequency (number events per year), duration (number days per event), return time (number days per event) since the previous event, onset rate (°C per day) from start until peak intensity, peak intensity (°C), and total days reefs experience MHWs per year. Points denote annual mean values (±SD) and blue lines represent linear (lm or glm) trends within each ecoregion (see Figures 1, S5 for ecoregion locations). Frequency, duration, and return time across all Caribbean coral reefs are depicted in Figure 5 in the main text. 
 
@@ -2226,6 +2254,7 @@ kable(ecoregion_slope, booktabs = TRUE, row.names = FALSE, col.names = c("Ecoreg
 ```
 
 ### Table S4
+
 **Table S4.** Model results for MHW trends in the Caribbean basin between 1981-2018. Frequency and duration modeled using glm model with poisson distribution and log link. Estimates, standard error, z scores, and p-values are reported. Nagelkerke pseudo r-squared used to assess goodness of fit. MHW intensity was log transformed before modeling with ols model. Estimate, standard error, t value and p-value are reported along with multiple and adjusted r-squared.
 
 ```{r table S4 saving}
@@ -2262,6 +2291,105 @@ table_s4
 ```
 
 
+### Table S5
+
+**Table S5.** Mean decadal value of MHW parameters (frequency, duration, and return time) for the entire basin and by ecoregion.
+
+```{r MHW decade values}
+
+### Decade summaries across Caribbean
+# Mean frequency:
+freq_decade_summary <- mhw_pixel %>% 
+  group_by(year, total_events) %>% 
+  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
+  group_by(decade) %>% 
+  summarise(frequency = mean(total_events, na.rm = TRUE))
+
+# Mean duration:
+duration_decade_summary <- mhw_pixel %>% 
+  group_by(year, avg_duration) %>% 
+  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
+  group_by(decade) %>% 
+  summarise(duration = mean(avg_duration, na.rm = TRUE))
+
+# Mean return time:
+rt_decade_summary <- mhw_pixel %>% 
+  group_by(year, avg_rt) %>% 
+  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
+  group_by(decade) %>% 
+  summarise("return time" = mean(avg_rt, na.rm = TRUE))
+
+
+### Decade summaries by ecoregion
+# Mean frequency:
+freq_decade_eco_summary <- mhw_pixel %>% 
+  group_by(year, ecoregion, total_events) %>% 
+  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
+  group_by(decade, ecoregion) %>% 
+  summarise(frequency = mean(total_events, na.rm = TRUE))
+
+# Mean duration:
+duration_decade_eco_summary <- mhw_pixel %>% 
+  group_by(year, ecoregion, avg_duration) %>% 
+  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
+  group_by(decade, ecoregion) %>% 
+  summarise(duration = mean(avg_duration, na.rm = TRUE))
+
+# Mean return time:
+rt_decade_eco_summary <- mhw_pixel %>% 
+  group_by(year, ecoregion, avg_rt) %>% 
+  mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
+  group_by(decade, ecoregion) %>% 
+  summarise("return time" = mean(avg_rt, na.rm = TRUE))
+
+```
+
+```{r table S5 - MHW decade summaries}
+
+# Frequency data per region (and across entire Caribbean)
+freq_decade_full <- freq_decade_summary %>% 
+  add_column(ecoregion = rep("Caribbean", nrow(freq_decade_summary)), .before = "frequency") %>% 
+  bind_rows(freq_decade_eco_summary) %>% 
+  add_column(metric = rep("Frequency", 36), .before = "ecoregion") %>%  
+  mutate(frequency = round(frequency, 1)) %>% 
+  spread(decade, frequency)
+
+# Duration data per region (and across entire Caribbean)
+dur_decade_full <- duration_decade_summary %>% 
+  add_column(ecoregion = rep("Caribbean", nrow(duration_decade_summary)), .before = "duration") %>% 
+  bind_rows(duration_decade_eco_summary) %>% 
+  add_column(metric = rep("Duration", 36), .before = "ecoregion") %>%    
+  mutate(duration = round(duration, 1)) %>%   
+  spread(decade, duration)
+
+# Return time data per region (and across entire Caribbean)
+rt_decade_full <- rt_decade_summary %>% 
+  add_column(ecoregion = rep("Caribbean", nrow(rt_decade_summary)), .before = "return time") %>% 
+  bind_rows(rt_decade_eco_summary) %>% 
+  add_column(metric = rep("Return time", 36), .before = "ecoregion") %>%  
+  mutate(`return time` = round(`return time`, 1)) %>%
+  spread(decade, `return time`)
+
+
+# Combine all parameters into single table
+mhw_decade_full <- freq_decade_full %>% 
+  bind_rows(dur_decade_full, rt_decade_full) %>% 
+  mutate(ecoregion = factor(ecoregion, levels = c("Caribbean", "Bahamian", "Eastern Caribbean", "Floridian", "Greater Antilles", "Gulf of Mexico", "Southern Caribbean", "Southwestern Caribbean", "Western Caribbean"))) %>% 
+  rename(Region = ecoregion) %>% 
+  arrange(metric, Region)
+
+
+## Create table with format for markdown and to save
+table_s5 <- kable(mhw_decade_full[-1], booktabs = T) %>%
+  kable_styling(font_size = 12, full_width = F) %>% 
+  row_spec(c(1, 10, 19), bold = TRUE) %>% 
+  pack_rows("Frequency (events per year)", 1, 9) %>%
+  pack_rows("Duration (days)", 10, 18) %>% 
+  pack_rows("Return Time (days)", 19, 27)  
+table_s5
+
+```
+
 
 ```{r export tables to excel WB, eval=FALSE, include=FALSE}
 
@@ -2284,9 +2412,9 @@ writeData(wb, sheet = 3, x = table_s4)
 setColWidths(wb, sheet = 3, cols = 1:5, widths = "auto")
 
 ## add 'Table S5' worksheet
-#addWorksheet(wb, "Table S5 - MHW metrics") 
-#writeData(wb, sheet = 4, x = chla_tab)
-#setColWidths(wb, sheet = 4, cols = 1:5, widths = "auto")
+addWorksheet(wb, "Table S5 - MHW metrics") 
+writeData(wb, sheet = 4, x = table_s5)
+setColWidths(wb, sheet = 4, cols = 1:5, widths = "auto")
 
 # save workbook
 saveWorkbook(wb, file="data/Supplemental_Tables.xlsx", overwrite = TRUE)
