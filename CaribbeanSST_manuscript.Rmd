@@ -9,7 +9,6 @@ output:
 ---
 
 ```{r knit options, include=FALSE}
-library(prettydoc)
 
 knitr::opts_chunk$set(
 	echo = FALSE,
@@ -23,7 +22,11 @@ opts <- options(knitr.kable.NA = "")
 ```{r load libraries}
 
 ### Used packages that need to be installed to run code:
-# install.packages("sf", "ncdf4", "ggrepel", "raster", "viridis", "maptools", "rgdal", "ggplot2", "cowplot", "tidyverse", "rnaturalearth", "xts", "RColorBrewer", "tidyr", "dplyr", "binr", "fields", "gganimate", "sp", "mgcv", "plotly", "grDevices", "repmis", "foreach", "kableExtra", "splines", "gridExtra", "Hmisc", "ggpubr", "sjPlot", "broom", "modelr", "performance", "fmsb")
+needed_packages <- c("sf", "ncdf4", "ggrepel", "raster", "viridis", "maptools", "rgdal", "ggplot2", "cowplot", "tidyverse", "rnaturalearth", "xts", "RColorBrewer", "tidyr", "dplyr", "binr", "fields", "gganimate", "sp", "mgcv", "plotly", "grDevices", "repmis", "foreach", "kableExtra", "splines", "gridExtra", "Hmisc", "ggpubr", "sjPlot", "broom", "modelr", "performance", "fmsb", "transformr", "gifski", "gapminder") # Specify necessary packages
+
+not_installed <- needed_packages[!(needed_packages %in% installed.packages()[ , "Package"])] # Extract not installed packages
+if(length(not_installed)) install.packages(not_installed) # Install not installed packages
+
 
 # library(devtools)
 # devtools::install_github("NCAR/fields")
@@ -38,13 +41,15 @@ library(viridis)
 library(maptools)
 library(rgdal)
 library(ggplot2)
-library(cowplot)
+#library(cowplot)
 library(tidyverse)
 library(rnaturalearth)
 library(xts)
 library(RColorBrewer)
 library(tidyr)
 library(dplyr)
+library(gifski)
+library(gapminder)
 library(binr)
 library(fields)
 library(gganimate)
@@ -64,6 +69,7 @@ library(broom)
 library(modelr)
 library(performance)
 library(fmsb)
+library(transformr)
 
 ```
 
@@ -258,7 +264,7 @@ compiled_eco_df$ecoregion <- gsub("Southern G", "G", compiled_eco_df$ecoregion)
 # create dataframe of just ecoregion and n
 lab_df <- compiled_eco_df %>% 
   group_by(ecoregion) %>% 
-  summarize(n = n())
+  summarise(n = n())
 
 # create new labels to display 'ECOREGION (n=NUMBER_REEFS)'
 labels <- paste(lab_df$ecoregion, " (n=", lab_df$n, ")", sep = "")
@@ -500,7 +506,7 @@ had_full$month2 <- factor(had_full$month) # make a month as a factor column for 
 # calculate summary statistic per month across years
 HADI_month_avg <- had_full %>% 
   group_by(month) %>% 
-  summarize(mean = mean(mean_temp, na.rm = TRUE),
+  summarise(mean = mean(mean_temp, na.rm = TRUE),
             sd = sd(mean_temp, na.rm = TRUE),
             n = n()) %>% 
   mutate(se = sd / sqrt(n),
@@ -557,7 +563,7 @@ had_predict_df <- cbind(had_gam_month, response = had_gam_pred$fit, lwr = had_ga
 # calculate summary statistic per month across years
 HADI_year_avg <- had_full %>% 
   group_by(year) %>% 
-  summarize(mean = mean(mean_temp, na.rm = TRUE),
+  summarise(mean = mean(mean_temp, na.rm = TRUE),
             max = max(mean_temp, na.rm = TRUE),
             min = min(mean_temp, na.rm = TRUE),
             sd = sd(mean_temp, na.rm = TRUE),
@@ -589,7 +595,7 @@ had_year_plot <- ggplot() +
 ```{r HadISST combined figure, fig.align='center', fig.width=6, fig.height=7.5}
 
 # Saves the manuscript version of the HadISST historic SST
-plot_grid(had_month_plot, had_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
+ggarrange(had_month_plot, had_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
   ggsave("figures/Manuscript/Fig2_SST_trends.pdf", width = 6, height = 7.5)
 
 ```
@@ -678,7 +684,7 @@ eco_sst_df$ecoregion <- gsub("Southern G", "G", eco_sst_df$ecoregion)
 
 ecoregion_sst <- eco_sst_df %>% 
   group_by(ecoregion, date) %>% 
-  summarize(mean_sst = mean(sst, na.rm = TRUE),
+  summarise(mean_sst = mean(sst, na.rm = TRUE),
             max = max(sst, na.rm = TRUE),
             min = min(sst, na.rm = TRUE),
             n = n())
@@ -714,7 +720,7 @@ ggplot() +
 ## Calculate summary statistic per month across years
 ecoregion_sst_annual <- ecoregion_sst %>% 
   group_by(ecoregion, year) %>% 
-  summarize(mean = mean(mean_sst, na.rm = TRUE),
+  summarise(mean = mean(mean_sst, na.rm = TRUE),
             max = max(mean_sst, na.rm = TRUE),
             min = min(mean_sst, na.rm = TRUE),
             range = max - min,
@@ -727,7 +733,7 @@ ecoregion_sst_annual <- ecoregion_sst %>%
 ## Create overall mean SST per ecoregion for plotting dashed line
 ecoregion_year_mean <- ecoregion_sst %>% 
   group_by(ecoregion) %>% 
-  summarize(mean = round(mean(mean_sst, na.rm = TRUE), 2),
+  summarise(mean = round(mean(mean_sst, na.rm = TRUE), 2),
             range = round(mean((max(mean_sst, na.rm = TRUE) - min(mean_sst, na.rm = TRUE)), na.rm = TRUE), 2))
 
 ecoregion_year_mean$lab <- paste(LETTERS[1:8])
@@ -1149,7 +1155,7 @@ path_full$month2 <- factor(path_full$month) # make a month as a factor column fo
 # calculate summary statistic per month across years
 Path_month_avg <- path_full %>% 
   group_by(month) %>% 
-  summarize(mean = mean(mean_temp, na.rm = TRUE),
+  summarise(mean = mean(mean_temp, na.rm = TRUE),
             sd = sd(mean_temp, na.rm = TRUE),
             n = n()) %>% 
   mutate(se = sd / sqrt(n),
@@ -1190,7 +1196,7 @@ path_gam_df <- subset(path_gam_df, year != "2020") # exclude 2020 data
 # calculate summary statistic per month across years
 Path_year_avg <- path_full %>% 
   group_by(year) %>% 
-  summarize(mean = mean(mean_temp, na.rm = TRUE),
+  summarise(mean = mean(mean_temp, na.rm = TRUE),
             max = max(mean_temp, na.rm = TRUE),
             min = min(mean_temp, na.rm = TRUE),
             sd = sd(mean_temp, na.rm = TRUE),
@@ -1222,7 +1228,7 @@ path_year_plot <- ggplot() +
 ```{r Pathfinder combined figure, fig.align='center', fig.width=6, fig.height=7.5}
 
 # Saves the manuscript version of the Pathfinder historic SST
-plot_grid(path_month_plot, path_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
+ggarrange(path_month_plot, path_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
   ggsave("figures/Supplemental/FigS3_Pathfinder_SST_trends.pdf", width = 6, height = 7.5)
 
 ```
@@ -1272,7 +1278,7 @@ Comparison of HadISST (1871-2020) and Pathfinder (1981-2019) SST recorded on Car
 
 ### Figure S5
 
-![](figures/Supplemental/Ecoregion_MapSST.png)
+![](figures/Supplemental/FigS5_Ecoregion_MapSST.png)
 
 Historic SST trends on coral reefs within Caribbean ecoregions (1871 - 2020) with corresponding reef locations (see Figures 1, 3 in the main text). The colour of each reef location and box around long-term SST (HadISST) plots represent the designated ecoregion. Plots depict SST data with GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the mean SST over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean for the A) Bahamian, B) Eastern Caribbean, C) Floridian, D) Greater Antilles, E) Gulf of Mexico, F) Southern Caribbean, G) Southwestern Caribbean, and H) Western Caribbean ecoregions. 
 
@@ -1303,7 +1309,7 @@ had_gif <- had_plot_gif +
   labs(title = "Year: {frame_time} (HadISST)") +
   shadow_mark(alpha = 0.1, size = 0.5)
 
-animate(had_gif, fps = 10, nframes = 300, end_pause = 2, width = 650, height = 400)
+animate(had_gif, fps = 10, nframes = 300, end_pause = 2, width = 650, height = 400, renderer = gifski_renderer())
 anim_save("figures/Supplemental/HadISST.gif")
 
 ```
@@ -1474,11 +1480,11 @@ mhw_pval_markdown <- ggplot(MHW_trends, aes(x = lon, y = lat)) +
 ```{r combined SST and MHW maps}
 
 ### Combined plots
-Figure4 <- cowplot::plot_grid(path_map, map_slope, labels = c("A", "B"), label_size = 18) +
+Figure4 <- ggarrange(path_map, map_slope, labels = c("A", "B"), label_size = 18) +
   ggsave("figures/Manuscript/Fig4_SST_MHW_map.pdf", width = 14.5, height = 5)
 
 # markdown version
-cowplot::plot_grid(path_map_markdown, mhw_map_markdown, labels = c("A", "B"))
+ggarrange(path_map_markdown, mhw_map_markdown, labels = c("A", "B"))
 
 ```
 
@@ -1736,21 +1742,21 @@ freq_decade_summary <- mhw_pixel %>%
   group_by(year, total_events) %>% 
   mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
   group_by(decade) %>% 
-  summarize(mean_duration = mean(total_events, na.rm = TRUE))
+  summarise(mean_duration = mean(total_events, na.rm = TRUE))
 
 # Mean duration:
 duration_decade_summary <- mhw_pixel %>% 
   group_by(year, avg_duration) %>% 
   mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
   group_by(decade) %>% 
-  summarize(mean_duration = mean(avg_duration, na.rm = TRUE))
+  summarise(mean_duration = mean(avg_duration, na.rm = TRUE))
 
 # Mean return time:
 rt_decade_summary <- mhw_pixel %>% 
   group_by(year, avg_rt) %>% 
   mutate(decade = floor(as.numeric(year) / 10) * 10) %>% 
   group_by(decade) %>% 
-  summarize(mean_duration = mean(avg_rt, na.rm = TRUE))
+  summarise(mean_duration = mean(avg_rt, na.rm = TRUE))
 
 ```
 
@@ -1764,11 +1770,11 @@ rt_decade_summary <- mhw_pixel %>%
 ```{r combined SST and MHW p value maps}
 
 ## Combined p values:
-FigureS5 <- cowplot::plot_grid(path_pval_map, map_p, align = "hv", labels = c("A", "B")) +
+FigureS5 <- ggarrange(path_pval_map, map_p, align = "hv", labels = c("A", "B")) +
   ggsave("figures/Supplemental/FigS6_SST_MHW_significance_map.pdf", width = 14.5, height = 5)
 
 # markdown version of plot
-cowplot::plot_grid(path_pval_markdown, mhw_pval_markdown, align = "hv", labels = c("A", "B")) 
+ggarrange(path_pval_markdown, mhw_pval_markdown, align = "hv", labels = c("A", "B")) 
 
 ```
 
@@ -1832,7 +1838,7 @@ had_pval_map <- ggplot() +
 
 ```{r HadISST full SST map combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
-plot_grid(had_map, had_pval_map, labels = c("A", "B")) +
+ggarrange(had_map, had_pval_map, labels = c("A", "B")) +
   ggsave("figures/Supplemental/FigS7_HadISST_map.pdf", width = 14, height = 5)
 
 ```
@@ -1896,7 +1902,7 @@ had_pval_map_sub <- ggplot() +
 
 ```{r HadISST SST map subset combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
-plot_grid(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
+ggarrange(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
   ggsave("figures/Supplemental/FigS8_HadISST_subset_map.pdf", width = 14, height = 5)
 
 ```
@@ -2247,7 +2253,7 @@ mhw_mod_out <- mhw_mod_out %>%
 
 # combine them with format
 table_s4 <- kable(mhw_mod_out, booktabs = T) %>%
-  kable_styling(font_size = 10, full_width = F) %>% 
+  kable_styling(font_size = 12, full_width = F) %>% 
   pack_rows("Frequency", 1, 3) %>%
   pack_rows("Duration", 4, 6) %>%
   pack_rows("Return Time", 7, 9)
@@ -2257,7 +2263,7 @@ table_s4
 
 
 
-```{r export tables to excel WB, message=FALSE, warning=FALSE}
+```{r export tables to excel WB, eval=FALSE, include=FALSE}
 
 ### Create workbook
 wb <- createWorkbook()
