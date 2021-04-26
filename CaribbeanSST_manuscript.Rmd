@@ -2437,9 +2437,9 @@ saveWorkbook(wb, file="data/Supplemental_Tables.xlsx", overwrite = TRUE)
 
 ## Session information {.tabset}
 
-All code was written by [Colleen B. Bove](https://colleenbove.science), feel free to contact with questions.
+Code was compiled by [Colleen B. Bove](https://colleenbove.science), feel free to contact with questions. 
 
-Session information from the last run date on `r date`:
+Session information from the latest compile on `r date`:
 
 ```{r session info}
 
