@@ -2437,7 +2437,7 @@ saveWorkbook(wb, file="data/Supplemental_Tables.xlsx", overwrite = TRUE)
 
 ## Session information {.tabset}
 
-Code was compiled by [Colleen B. Bove](https://colleenbove.science), feel free to contact with questions. 
+Sea surface temperature code written by [Colleen B. Bove](https://colleenbove.science) and marine heatwave code written by [Laura Mudge](https://lmudge13.github.io/index.html).
 
 Session information from the latest compile on `r date`:
 
