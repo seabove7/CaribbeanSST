@@ -2393,13 +2393,13 @@ mhw_decade_full <- freq_decade_full %>%
 
 
 ## Create table with format for markdown and to save
-table_s3 <- kable(mhw_decade_full[-1], booktabs = T) %>%
+table_s4 <- kable(mhw_decade_full[-1], booktabs = T) %>%
   kable_styling(font_size = 12, full_width = F) %>% 
   row_spec(c(1, 10, 19), bold = TRUE) %>% 
   pack_rows("Duration (days)", 1, 9) %>% 
   pack_rows("Frequency (events per year)", 10, 18) %>%  
   pack_rows("Return Time (days)", 19, 27)  
-table_s3
+table_s4
 
 ```
 
