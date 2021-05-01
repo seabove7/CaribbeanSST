@@ -12,7 +12,7 @@ GitHub repository containing data and code accompanying the Caribbean warming an
 
 
 #### Repository contains the following:
-1. R markdown script and html output with all code and analyses included in manuscript (*Coral_GVC_Analysis*)
+1. R markdown script and html output with all code and analyses included in manuscript (*CaribbeanSST_manuscript*)
 2. Code
    * External R script used to extract SST from netCDF files using coral reef GPS coordinates to run remotely  (*SSTExtraction_ReefGPS.R*)
    * External R script used to clip Pathfinder netCDF and calculate rates of warming to run remotely (*Pathfinder_RasterCalculations.R*)
