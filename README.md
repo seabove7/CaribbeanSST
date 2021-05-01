@@ -19,7 +19,7 @@ GitHub repository containing data and code accompanying the Caribbean warming an
    * Functions from Gavin Simpson (GitHub: gavinsimpson) for calculating significant slopes from a GAM (*GSimpsonFunctions.R*)
 3. Data
    * EcoRegions
-      * Caribbean ecoregion shapefiles (*Caribbean_ecoregions.**)
+      * Caribbean ecoregion shapefiles (*Caribbean_ecoregions.*)
    * HadISST
       * (*HadISST_ecoregion_sst.Rdata*)
       * (*HadISST_reefs_gps.Rdata*)
@@ -33,20 +33,19 @@ GitHub repository containing data and code accompanying the Caribbean warming an
 4. Figures
    * Manuscript
       * Fig1_ReefMap.pdf
-      * Fig2_SST_trends.pdf (*not created in Rmarkdown script*)
+      * Fig2_SST_trends.pdf
       * Fig3_Ecoregion_SST_trends.pdf
       * Fig4_SST_MHW_map.pdf
-      * Fig5_ (*still working on this one*)
-      * Fig6_MHW_metrics.pdf
+      * Fig5_MHW_metrics.pdf
    * Supplemental
-      * FigS2_HadISST_GAM_slopes.pdf
-      * FigS3_Pathfinder_SST_trends.pdf
-      * FigS4_Both_SST_trends.pdf
-      * FigS5_Ecoregion_MapSST.pdf
-      * FigS6_SST_MHW_significance_map.pdf
-      * FigS7_HadISST_map.pdf
-      * FigS8_HadISST_subset_map.pdf
-      * FigS9_MHW_metrics_ecoregions.pdf
+      * FigS1_HadISST_GAM_slopes.pdf
+      * FigS2_Pathfinder_SST_trends.pdf
+      * FigS3_Both_SST_trends.pdf
+      * FigS4_Ecoregion_MapSST.pdf
+      * FigS5_SST_MHW_significance_map.pdf
+      * FigS6_HadISST_map.pdf
+      * FigS7_HadISST_subset_map.pdf
+      * FigS8_MHW_metrics_ecoregions.pdf
       * HadISST.gif
 
 **NOTE:** The original OISST database compilation and MHW analyses were all performed by Laura Mudge (GitHub: [Lmudge13](https://github.com/Lmudge13)). This repository includes the previously compiled/calculated OISST and MHW parameters for simplicity. To find the code and data used to compile the datasets for Caribbean MHWs in this repository, please visit [Laura's GitHub](https://github.com/Lmudge13) or email me (colleenbove@gmail.com).
