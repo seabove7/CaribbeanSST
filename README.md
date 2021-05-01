@@ -30,6 +30,7 @@ GitHub repository containing data and code accompanying the Caribbean warming an
    * ReefData
       * (*CaribbeanReef_points.csv*)
       * (*Caribbean_reefs.**)
+   * Supplemental tables as an excel file produced in the markdown file (*Supplemental_Tables.xlsx)
 4. Figures
    * Manuscript
       * Fig1_ReefMap.pdf
