@@ -34,10 +34,10 @@ GitHub repository containing data and code accompanying the Caribbean warming an
 4. Figures
    * Manuscript
       * Fig1_ReefMap.pdf
-      * Fig2_SST_trends.pdf
-      * Fig3_Ecoregion_SST_trends.pdf
-      * Fig4_SST_MHW_map.pdf
-      * Fig5_MHW_metrics.pdf
+      * Fig2_SST_trends (both PDF and PNG versions)
+      * Fig3_Ecoregion_SST_trends (both PDF and PNG versions)
+      * Fig4_SST_MHW_map (both PDF and PNG versions)
+      * Fig5_MHW_metrics (both PDF and PNG versions)
    * Supplemental
       * FigS1_HadISST_GAM_slopes.pdf
       * FigS2_Pathfinder_SST_trends.pdf
