@@ -33,7 +33,7 @@ GitHub repository containing data and code accompanying the Caribbean warming an
    * Supplemental tables as an excel file produced in the markdown file (*Supplemental_Tables.xlsx*)
 4. Figures
    * Manuscript
-      * Fig1_ReefMap.pdf
+      * Fig1_ReefMap.pdf (both PDF and PNG versions)
       * Fig2_SST_trends (both PDF and PNG versions)
       * Fig3_Ecoregion_SST_trends (both PDF and PNG versions)
       * Fig4_SST_MHW_map (both PDF and PNG versions)
