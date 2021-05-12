@@ -42,7 +42,6 @@ library(maptools)
 library(rgdal)
 library(openxlsx)
 library(ggplot2)
-#library(cowplot)
 library(tidyverse)
 library(rnaturalearth)
 library(xts)
@@ -120,11 +119,11 @@ bound_SP_df <- as(bound_SP, "SpatialPolygonsDataFrame") # convert to SpatialPoly
 ## The paths for the files stored on Dropbox are below:
 
 ## gshhs_f.b: coastline map shapefile
-# Dropbox link: 
+# Dropbox link: https://www.dropbox.com/s/exn3p4v2q6isvla/gshhs_f.b?dl=0
 gshhs_f_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/gshhs_f.b"
 
 ## WCMC008_CoralReef2018_Py_v4.shp: global coral reef shapefiles
-# Dropbox link: 
+# Dropbox link: https://www.dropbox.com/sh/q9yn83jzx57yx9h/AACHWXkNUQ7HX4ZKqnaMzv2aa?dl=0
 WCMC008_CoralReef2018_Py_v4_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/14_001_WCMC008_CoralReefs2018_v4/01_Data/WCMC008_CoralReef2018_Py_v4.shp"
 
 ## meow_ecos.shp: global ecoregion shapefiles
@@ -132,23 +131,23 @@ WCMC008_CoralReef2018_Py_v4_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/
 ecoregion_shape_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/MEOW/meow_ecos.shp"
 
 ## HadISST_sst.nc: 
-# Dropbox link: 
+# Dropbox link: https://www.dropbox.com/s/6apxz5mqz2e3i6v/HadISST_sst.nc?dl=0
 HadISST_sst_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/HadISST_sst.nc"
 
 ## pathfinder_combined_monthly_data.nc: 
-# Dropbox link: 
+# Dropbox link: https://www.dropbox.com/s/qg5ybjnnd7rayub/pathfinder_combined_monthly_data.nc?dl=0
 pathfinder_combined_monthly_data_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/pathfinder_combined_monthly_data.nc"
 
 ## Pathfinder_monthly_edit.nc: 
-# Dropbox link:
+# Dropbox link: https://www.dropbox.com/s/klorzek794epfpn/PathfinderSST_monthly_edit.nc?dl=0
 Pathfinder_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/PathfinderSST_monthly_edit.nc"
 
 ## OISST_MHW_carib.Rda: 
-# Dropbox link: 
+# Dropbox link: https://www.dropbox.com/s/ztqfu2sh0da54j3/OISST_MHW_carib.Rda?dl=0
 MHW_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/OISST_MHW_carib.Rda"
 
 ## mhw_carib.csv
-# Dropbox link: 
+# Dropbox link: https://www.dropbox.com/s/d2kj7531epszsua/mhw_carib.csv?dl=0
 MHW_carib_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/mhw_carib.csv"
 
 ```
@@ -169,13 +168,14 @@ MHW_carib_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/
 
 #### **Abstract:**
 
-Anthropogenic climate change is rapidly altering the characteristics and dynamics of biological communities. This is especially apparent in marine systems as the world’s oceans are warming at an unprecedented rate, causing dramatic changes to coastal marine systems, especially on coral reefs of the Caribbean. We used three complementary ocean temperature databases (HadISST, Pathfinder, and OISST) to quantify change in thermal characteristics of Caribbean coral reefs over the last 150 years (1871–2020). These sea surface temperature (SST) databases included combined in situ and satellite-derived SST (HadISST, OISST), as well as satellite-only observations (Pathfinder) at multiple spatial resolutions. We also compiled a Caribbean coral reef database identifying 5,326 unique reefs across the region. We found that the Caribbean reefs have warmed on average by 0.20 °C per decade since 1987, the calculated year that rapid warming began on Caribbean reefs. Further, geographic variation in warming rates ranged from only 0.17 °C per decade on Bahamian reefs to 0.26 °C per decade on reefs within the Southern and Eastern Caribbean ecoregions. If this linear rate of warming continues, these already threatened ecosystems would warm by an additional 1.6°C on average by 2100 across the Caribbean. We also found that marine heatwave (MHW) events are increasing in both frequency and duration across the Caribbean. Caribbean coral reefs now experience on average 5 MHW events annually, compared to 1 per year in the early 1980s. Combined, these changes have caused a dramatic shift in the composition and functioning of Caribbean coral reef ecosystems. If reefs continue to warm at this rate, we are likely to lose even the remnant Caribbean coral reef communities of today in the coming decades. 
+Anthropogenic climate change is rapidly altering the characteristics and dynamics of biological communities. This is especially apparent in marine systems as the world’s oceans are warming at an unprecedented rate, causing dramatic changes to coastal marine systems, especially on coral reefs of the Caribbean. We used three complementary ocean temperature databases (HadISST, Pathfinder, and OISST) to quantify change in thermal characteristics of Caribbean coral reefs over the last 150 years (1871–2020). These sea surface temperature (SST) databases included combined in situ and satellite-derived SST (HadISST, OISST), as well as satellite-only observations (Pathfinder) at multiple spatial resolutions. We also compiled a Caribbean coral reef database identifying 5,326 unique reefs across the region. We found that Caribbean reefs have warmed on average by 0.20 °C per decade since 1987, the calculated year that rapid warming began on Caribbean reefs. Further, geographic variation in warming rates ranged from 0.17 °C per decade on Bahamian reefs to 0.26 °C per decade on reefs within the Southern and Eastern Caribbean ecoregions. If this linear rate of warming continues, these already threatened ecosystems would warm by an additional 1.6 °C on average by 2100. We also found that marine heatwave (MHW) events are increasing in both frequency and duration across the Caribbean. Caribbean coral reefs now experience on average 5 MHW events annually, compared to 1 per year in the early 1980s. Combined, these changes have caused a dramatic shift in the composition and function of Caribbean coral reef ecosystems. If reefs continue to warm at this rate, we are likely to lose even the remnant Caribbean coral reef communities of today in the coming decades.  
 
 <br/>
 
 ##### **Citation:**
 
-*Citation will go here*
+
+*Repository DOI hosted on Zenodo* [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4751658.svg)](https://doi.org/10.5281/zenodo.4751658)
 
 
 <br/>
@@ -849,7 +849,8 @@ ggplot() +
   geom_line(data = had_gam_slope, aes(x = year, y = value, colour = type), lwd = 0.75) +
   scale_colour_manual(values = c("#4575b4", "#d73027")) +
   coord_cartesian(xlim = c(1870, 2020))  +
-  ggsave("figures/Supplemental/FigS1_HadISST_GAM_slopes.pdf", width = 6, height = 3.75)
+  ggsave("figures/Supplemental/FigS1_HadISST_GAM_slopes.pdf", width = 6, height = 3.75)  +
+  ggsave("figures/Supplemental/FigS1_HadISST_GAM_slopes.png", width = 6, height = 3.75)
 
 ```
 
@@ -1229,7 +1230,8 @@ path_year_plot <- ggplot() +
 
 # Saves the manuscript version of the Pathfinder historic SST
 ggarrange(path_month_plot, path_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
-  ggsave("figures/Supplemental/FigS2_Pathfinder_SST_trends.pdf", width = 6, height = 7.5)
+  ggsave("figures/Supplemental/FigS2_Pathfinder_SST_trends.pdf", width = 6, height = 7.5) +
+  ggsave("figures/Supplemental/FigS2_Pathfinder_SST_trends.png", width = 6, height = 7.5)
 
 ```
 
@@ -1265,7 +1267,8 @@ combo_plot <- ggplot() +
   ggtitle("Caribbean coral reefs historic SST trends") +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
   coord_cartesian(xlim = c(1870, 2020)) +
-  ggsave("figures/Supplemental/FigS3_Both_SST_trends.pdf", width = 6, height = 4)
+  ggsave("figures/Supplemental/FigS3_Both_SST_trends.pdf", width = 6, height = 4) +
+  ggsave("figures/Supplemental/FigS3_Both_SST_trends.png", width = 6, height = 4)
 
 ggplotly(combo_plot)
 
@@ -1745,7 +1748,8 @@ ggarrange(plot_freq_pixel, plot_dur_pixel, plot_rt_pixel, ncol = 3, labels = "AU
 
 ## Combined p values:
 FigureS5 <- ggarrange(path_pval_map, map_p, align = "hv", labels = c("A", "B")) +
-  ggsave("figures/Supplemental/FigS5_SST_MHW_significance_map.pdf", width = 14.5, height = 5)
+  ggsave("figures/Supplemental/FigS5_SST_MHW_significance_map.pdf", width = 14.5, height = 5) +
+  ggsave("figures/Supplemental/FigS5_SST_MHW_significance_map.png", width = 14.5, height = 5)
 
 # markdown version of plot
 ggarrange(path_pval_markdown, mhw_pval_markdown, align = "hv", labels = c("A", "B")) 
@@ -1813,7 +1817,8 @@ had_pval_map <- ggplot() +
 ```{r HadISST full SST map combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
 ggarrange(had_map, had_pval_map, labels = c("A", "B")) +
-  ggsave("figures/Supplemental/FigS6_HadISST_map.pdf", width = 14, height = 5)
+  ggsave("figures/Supplemental/FigS6_HadISST_map.pdf", width = 14, height = 5) +
+  ggsave("figures/Supplemental/FigS6_HadISST_map.png", width = 14, height = 5)
 
 ```
 
@@ -1877,7 +1882,8 @@ had_pval_map_sub <- ggplot() +
 ```{r HadISST SST map subset combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
 ggarrange(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
-  ggsave("figures/Supplemental/FigS7_HadISST_subset_map.pdf", width = 14, height = 5)
+  ggsave("figures/Supplemental/FigS7_HadISST_subset_map.pdf", width = 14, height = 5) +
+  ggsave("figures/Supplemental/FigS7_HadISST_subset_map.png", width = 14, height = 5)
 
 ```
 
@@ -2011,7 +2017,8 @@ plot_totalDays_region <- ggplot(data = mhw_pixel %>% filter(!is.na(total_MHW_day
 
 ## Final combined MHW plot and save it
 ggarrange(plot_freq_region, plot_dur_region, plot_rt_region, plot_int_region, plot_onset_region, plot_totalDays_region, ncol = 1, heights = c(0.85, 0.75, 0.75, 0.75, 0.75, 0.95)) +
-  ggsave("figures/Supplemental/FigS8_MHW_ecoregion_metrics.pdf", width = 16, height = 12)
+  ggsave("figures/Supplemental/FigS8_MHW_ecoregion_metrics.pdf", width = 16, height = 12) +
+  ggsave("figures/Supplemental/FigS8_MHW_ecoregion_metrics.png", width = 16, height = 12)
 
 ```
 
