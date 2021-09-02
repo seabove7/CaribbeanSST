@@ -299,8 +299,8 @@ ggplot() +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33)) +
   scale_colour_manual("Ecoregion", values = pal, labels = eco_labs) +
   ylab("") +
-  xlab("") +
-  ggsave("figures/Manuscript/Fig1_ReefMap.pdf", width = 8, height = 3.5) +
+  xlab("")
+  ggsave("figures/Manuscript/Fig1_ReefMap.pdf", width = 8, height = 3.5)
   ggsave("figures/Manuscript/Fig1_ReefMap.png", width = 8, height = 3.5)
 
 ```
@@ -373,17 +373,70 @@ time_87 <- nc_times[Tstart_index_87:length(nc_times)]
 
 ```
 
+```{r eval=FALSE, include=FALSE}
+
+## Looking into autocorrelation of SST per pixel for maps:
+# I am testing for autocorrelation for a single pixel through the extire time series. If autocorrelation is present, I will then apply the updated model structure for all pixels in the function.
+
+test_point <- SpatialPoints(data.frame(x = -90.29731, y = 21.4517)) # testing with a single lat/lon point
+projection(test_point) <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
+test_raster <- raster::extract(data_brick, test_point) # extract all SST through time at this one point
+
+# create a dataframe of the extracted values and time
+test_sst <- data.frame(date = colnames(test_raster),
+                       sst = test_raster[1,]) %>% 
+  separate(date, c("year", "month", "day"))
+test_sst$year <- as.numeric(gsub("\\X", "", test_sst$year))
+test_sst$year_month <- as.numeric(paste(test_sst$year, test_sst$month, sep = "."))
+
+sst_lm <- lm(sst ~ year_month, data = test_sst)
+summary(sst_lm)
+ggplot(test_sst, aes(x = year_month, y = sst)) + geom_line() + geom_smooth(method = lm, se = FALSE)
+
+
+# checking for assumptions of normality: DOES NOT MEET
+par(mfrow=c(2,2))
+check_model(sst_lm) 
+check_autocorrelation(sst_lm) # From the function: "Performs a Durbin-Watson-Test to check for autocorrelated residuals. In case of autocorrelation, robust standard errors return more accurate results for the estimates, or maybe a mixed model with error term for the cluster groups should be used."
+# "Warning: Autocorrelated residuals detected (p < .001)."
+plot(residuals(sst_lm))
+
+
+## moving forward, need to account for autocorrelation
+gls_ac <- gls(sst ~ year_month, data = test_sst, 
+              correlation = corAR1(form = ~ year_month),
+              na.action=na.omit)
+
+summary(gls_ac)
+
+
+library(MuMIn)
+model.sel(sst_lm, gls_ac)
+
+```
+
 ```{r HadISST lm map df creation}
 
-## simple lm function applied to the full HadISST raster brick
-lm.fun <- function(x, time)
+### simple lm function applied to the full HadISST raster brick
+#lm.fun <- function(x, time)
+#{
+#  if(any(is.na(x))){NA}
+#  else{
+#    lm(x~time)$coefficients[2]*60*60*24 # slope here is degrees/day
+#  }
+#}
+
+## Trying to pull slope from the gls with a correction for autocorrelation
+gls.fun <- function(x, time)
 {
   if(any(is.na(x))){NA}
   else{
-    lm(x~time)$coefficients[2]*60*60*24 # slope here is degrees/day
+    gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action=na.omit)$coefficients[2]*60*60*24 # slope here is degrees/day
   }
 }
-raster_slope <- calc(data_brick, function(x)lm.fun(x, time = time))
+
+#raster_slope <- calc(data_brick, function(x)lm.fun(x, time = time))
+raster_slope <- calc(data_brick, function(x) gls.fun(x, time = time)) # new slope with autocorrelation
 
 # convert the raster to a df for plotting
 raster_slope <- raster_slope*(365.25*10) # this is currently C per decade
@@ -404,7 +457,7 @@ colnames(had_slope_sub) <- c("sst", "x", "y")
 
 ## And again for 1987–2020 for the rate since inflection:
 # apply the function
-raster_slope_87 <- calc(data_brick_87, function(x)lm.fun(x, time = time_87))
+raster_slope_87 <- calc(data_brick_87, function(x) gls.fun(x, time = time_87))
 
 # convert the raster to a dataframe for plotting
 raster_slope_sub_87 <- raster_slope_87*(365.25*10) # this is currently C per decade
@@ -587,7 +640,7 @@ had_year_plot <- ggplot() +
   geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.35) + # max sst
   geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.35) + # min sst
   geom_line(data = had_predict_df, aes(x = year, y = response)) + # the predicted GAM curve (modelled above)
-  coord_cartesian(xlim = c(1870, 2020))  +
+  coord_cartesian(xlim = c(1870, 2020))
   ggsave("figures/Supplemental/Bove_SST_abstract_image.png", width = 6, height = 3.75)
 
 ```
@@ -595,7 +648,7 @@ had_year_plot <- ggplot() +
 ```{r HadISST combined figure, fig.align='center', fig.width=6, fig.height=7.5}
 
 # Saves the manuscript version of the HadISST historic SST
-ggarrange(had_month_plot, had_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
+ggarrange(had_month_plot, had_year_plot, ncol = 1, labels = c("A", "B"), align = "hv")
   ggsave("figures/Manuscript/Fig2_SST_trends.pdf", width = 6, height = 7.5)
 
 ```
@@ -754,7 +807,7 @@ ggplot() +
   coord_cartesian(xlim = c(1870, 2020)) +
   scale_y_continuous(breaks = seq(20, 32, 2), limits = c(20, 32)) +
   facet_wrap(~ ecoregion, ncol = 2, scales = "free_y") +
-  geom_text(data = ecoregion_year_mean, aes(x = -Inf, y = Inf, label = lab, group = ecoregion), fontface = "bold", size = 4.5, hjust = -0.5, vjust = 1.4) +
+  geom_text(data = ecoregion_year_mean, aes(x = -Inf, y = Inf, label = lab, group = ecoregion), fontface = "bold", size = 4.5, hjust = -0.5, vjust = 1.4)
   ggsave("figures/Manuscript/Fig3_Ecoregion_SST_trends.pdf", width = 7, height = 8)
 
 ```
@@ -848,8 +901,8 @@ ggplot() +
   geom_line(data = had_predict_df, aes(x=year, y=response), lwd = 0.75) +
   geom_line(data = had_gam_slope, aes(x = year, y = value, colour = type), lwd = 0.75) +
   scale_colour_manual(values = c("#4575b4", "#d73027")) +
-  coord_cartesian(xlim = c(1870, 2020))  +
-  ggsave("figures/Supplemental/FigS1_HadISST_GAM_slopes.pdf", width = 6, height = 3.75)  +
+  coord_cartesian(xlim = c(1870, 2020))
+  ggsave("figures/Supplemental/FigS1_HadISST_GAM_slopes.pdf", width = 6, height = 3.75) 
   ggsave("figures/Supplemental/FigS1_HadISST_GAM_slopes.png", width = 6, height = 3.75)
 
 ```
@@ -1229,8 +1282,8 @@ path_year_plot <- ggplot() +
 ```{r Pathfinder combined figure, fig.align='center', fig.width=6, fig.height=7.5}
 
 # Saves the manuscript version of the Pathfinder historic SST
-ggarrange(path_month_plot, path_year_plot, ncol = 1, labels = c("A", "B"), align = "hv") +
-  ggsave("figures/Supplemental/FigS2_Pathfinder_SST_trends.pdf", width = 6, height = 7.5) +
+ggarrange(path_month_plot, path_year_plot, ncol = 1, labels = c("A", "B"), align = "hv")
+  ggsave("figures/Supplemental/FigS2_Pathfinder_SST_trends.pdf", width = 6, height = 7.5)
   ggsave("figures/Supplemental/FigS2_Pathfinder_SST_trends.png", width = 6, height = 7.5)
 
 ```
@@ -1266,8 +1319,8 @@ combo_plot <- ggplot() +
   geom_smooth(data = Path_year_avg[-1,], method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "black", group = 1, size = 1, se = FALSE) +
   ggtitle("Caribbean coral reefs historic SST trends") +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
-  coord_cartesian(xlim = c(1870, 2020)) +
-  ggsave("figures/Supplemental/FigS3_Both_SST_trends.pdf", width = 6, height = 4) +
+  coord_cartesian(xlim = c(1870, 2020))
+  ggsave("figures/Supplemental/FigS3_Both_SST_trends.pdf", width = 6, height = 4)
   ggsave("figures/Supplemental/FigS3_Both_SST_trends.png", width = 6, height = 4)
 
 ggplotly(combo_plot)
@@ -1485,7 +1538,7 @@ mhw_pval_markdown <- ggplot(MHW_trends, aes(x = lon, y = lat)) +
 ```{r combined SST and MHW maps}
 
 ### Combined plots
-Figure4 <- ggarrange(path_map, map_slope, labels = c("A", "B")) +
+Figure4 <- ggarrange(path_map, map_slope, labels = c("A", "B"))
   ggsave("figures/Manuscript/Fig4_SST_MHW_map.pdf", width = 14.5, height = 5)
 
 # markdown version
@@ -1731,7 +1784,7 @@ plot_rt_pixel <- ggplot(data = mhw_pixel %>% filter(!is.na(avg_rt)), aes(x= year
 ```{r combine and save MHW figure 5, fig.height = 3, fig.width = 10}
 
 ## Final combined MHW plot and save it
-ggarrange(plot_freq_pixel, plot_dur_pixel, plot_rt_pixel, ncol = 3, labels = "AUTO") +
+ggarrange(plot_freq_pixel, plot_dur_pixel, plot_rt_pixel, ncol = 3, labels = "AUTO")
   ggsave("figures/Manuscript/Fig5_MHW_metrics.pdf", width = 10, height = 3)
 
 ```
@@ -1748,8 +1801,8 @@ ggarrange(plot_freq_pixel, plot_dur_pixel, plot_rt_pixel, ncol = 3, labels = "AU
 ```{r combined SST and MHW p value maps}
 
 ## Combined p values:
-FigureS5 <- ggarrange(path_pval_map, map_p, align = "hv", labels = c("A", "B")) +
-  ggsave("figures/Supplemental/FigS5_SST_MHW_significance_map.pdf", width = 14.5, height = 5) +
+FigureS5 <- ggarrange(path_pval_map, map_p, align = "hv", labels = c("A", "B"))
+  ggsave("figures/Supplemental/FigS5_SST_MHW_significance_map.pdf", width = 14.5, height = 5)
   ggsave("figures/Supplemental/FigS5_SST_MHW_significance_map.png", width = 14.5, height = 5)
 
 # markdown version of plot
@@ -1817,8 +1870,8 @@ had_pval_map <- ggplot() +
 
 ```{r HadISST full SST map combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
-ggarrange(had_map, had_pval_map, labels = c("A", "B")) +
-  ggsave("figures/Supplemental/FigS6_HadISST_map.pdf", width = 14, height = 5) +
+ggarrange(had_map, had_pval_map, labels = c("A", "B"))
+  ggsave("figures/Supplemental/FigS6_HadISST_map.pdf", width = 14, height = 5)
   ggsave("figures/Supplemental/FigS6_HadISST_map.png", width = 14, height = 5)
 
 ```
@@ -1882,8 +1935,8 @@ had_pval_map_sub <- ggplot() +
 
 ```{r HadISST SST map subset combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
-ggarrange(had_map_sub, had_pval_map_sub, labels = c("A", "B")) +
-  ggsave("figures/Supplemental/FigS7_HadISST_subset_map.pdf", width = 14, height = 5) +
+ggarrange(had_map_sub, had_pval_map_sub, labels = c("A", "B"))
+  ggsave("figures/Supplemental/FigS7_HadISST_subset_map.pdf", width = 14, height = 5)
   ggsave("figures/Supplemental/FigS7_HadISST_subset_map.png", width = 14, height = 5)
 
 ```
@@ -2017,8 +2070,8 @@ plot_totalDays_region <- ggplot(data = mhw_pixel %>% filter(!is.na(total_MHW_day
 ```{r combine and save MHWs by ecoregion for Fig S8, fig.width = 12, fig.height = 10}
 
 ## Final combined MHW plot and save it
-ggarrange(plot_freq_region, plot_dur_region, plot_rt_region, plot_int_region, plot_onset_region, plot_totalDays_region, ncol = 1, heights = c(0.85, 0.75, 0.75, 0.75, 0.75, 0.95)) +
-  ggsave("figures/Supplemental/FigS8_MHW_ecoregion_metrics.pdf", width = 16, height = 12) +
+ggarrange(plot_freq_region, plot_dur_region, plot_rt_region, plot_int_region, plot_onset_region, plot_totalDays_region, ncol = 1, heights = c(0.85, 0.75, 0.75, 0.75, 0.75, 0.95))
+  ggsave("figures/Supplemental/FigS8_MHW_ecoregion_metrics.pdf", width = 16, height = 12)
   ggsave("figures/Supplemental/FigS8_MHW_ecoregion_metrics.png", width = 16, height = 12)
 
 ```
