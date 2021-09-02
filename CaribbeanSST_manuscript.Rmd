@@ -475,7 +475,7 @@ pval.fun <- function(x, time)
 {
   if(any(is.na(x))){NA}
   else{
-    summary(lm(x ~ time))$coefficients[4] # pulls the p value
+    summary(gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action=na.omit))$tTable[2,4] # pulls the p value
   }
 }
 raster_pval <- calc(data_brick, function(x)pval.fun(x, time = time))
@@ -1078,13 +1078,13 @@ data_brick2b <- calc(data_brick2, KtoC) # apply the Kelvin function written abov
 
 ## Calculate slope of temperature change across time for each pixel
 # simple lm function applied to the raster brick to calculate the slope of temperature change over timescale of raster
-lm.fun2 <- function(x, time){
+gls.fun2 <- function(x, time){
   if(is.na(x)){NA} # this removes any NA values from the slope calculations 
   else{
-    lm(x~time)$coefficients[2]*60*60*24 # slope here is degrees/day
+    gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action=na.omit)$coefficients[2]*60*60*24 # slope here is degrees/day
   }}
 
-raster_slope2 <- calc(data_brick2, function(x)lm.fun2(x, time = time)) # function applied here
+raster_slope2 <- calc(data_brick2, function(x) gls.fun2(x, time = time)) # function applied here
 
 
 ## Create dataframe from calculated slope raster in C per decade for plotting
@@ -1122,7 +1122,7 @@ pval.fun <- function(x, time)
 {
   if(any(is.na(x))){NA}
   else{
-    summary(lm(x ~ time))$coefficients[4] # pulls the p value
+    summary(gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action=na.omit))$tTable[2,4] # pulls the p value
   }
 }
 raster_pval <- calc(data_brick, function(x)pval.fun(x, time = time))
@@ -1859,7 +1859,7 @@ had_pval_map <- ggplot() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
   geom_raster(data = had_pavl_clipped, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = FALSE) +
-  scale_fill_manual("p-value", values = "#045a8d") +
+  scale_fill_brewer("p-value", palette = "PuBu", direction = -1) +
   geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   labs(x = "", y = "") +
@@ -1924,7 +1924,7 @@ had_pval_map_sub <- ggplot() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
   geom_raster(data = had_pval_sub_b_clipped, aes(x = x, y = y, fill = bins), alpha=0.8, interpolate = FALSE) +
-  scale_fill_manual("p-value", values = "#045a8d") +
+  scale_fill_brewer("p-value", palette = "PuBu", direction = -1) +
   geom_polygon(data = map_base, aes(group = group, x = lon, y = lat), colour = "#575757", fill = "grey81") +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   labs(x = "", y = "") +
