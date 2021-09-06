@@ -140,7 +140,7 @@ pathfinder_combined_monthly_data_path <- "/Users/colleen/Dropbox/Git/Data_Not_On
 
 ## Pathfinder_monthly_edit.nc: 
 # Dropbox link: https://www.dropbox.com/s/klorzek794epfpn/PathfinderSST_monthly_edit.nc?dl=0
-Pathfinder_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/PathfinderSST_monthly_edit.nc"
+Pathfinder_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/data/Pathfinder/Pathfinder_monthly_edit_06Sep2021.nc"
 
 ## OISST_MHW_carib.Rda: 
 # Dropbox link: https://www.dropbox.com/s/ztqfu2sh0da54j3/OISST_MHW_carib.Rda?dl=0
@@ -1119,19 +1119,19 @@ data_brick2 <- calc(data_brick2, NAset) # apply the NA function written above to
 data_brick2b <- calc(data_brick2, KtoC) # apply the Kelvin function written above to raster
 
 
-data_brick2[sapply(data_brick2, is.infinite)] <- NA
+data_brick2b[sapply(data_brick2b, is.infinite)] <- NA
 
 
 ## Calculate slope of temperature change across time for each pixel
 # simple lm function applied to the raster brick to calculate the slope of temperature change over timescale of raster
 gls.fun2 <- function(x, time){
-  if(is.na(x)){NA} # this removes any NA pixels from the slope calculations 
+  if(any(is.na(x))){NA} # this removes any NA pixels from the slope calculations 
   else{
     gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action = na.omit, control = list(singular.ok = TRUE))$coefficients[2]*60*60*24 # slope here is degrees/day
-    print(x)
+    #print(x)
   }}
 
-raster_slope2 <- calc(data_brick2, function(x) gls.fun2(x, time = time)) # function applied here
+raster_slope2 <- calc(data_brick2b, function(x) gls.fun2(x, time = time)) # function applied here
 
 
 ## Create dataframe from calculated slope raster in C per decade for plotting
@@ -1143,7 +1143,7 @@ colnames(path_slope) <- c("sst", "x", "y")
 ## Save the edited netCDF file and the slope raster/dataframe
 ## Only uncomment these lines if you want to write over existing files!! 
 
-#writeRaster(data_brick2b, filename = "data/Pathfinder/Pathfinder_monthly_edit.nc", format="CDF", overwrite=FALSE)
+#writeRaster(data_brick2b, filename = "data/Pathfinder/Pathfinder_monthly_edit_06Sep2021.nc", format = "CDF", overwrite = FALSE)
 #save(path_slope, file = "data/Pathfinder/Pathfinder_slope.Rdata")
 #write.csv(path_slope, file = "data/Pathfinder/Pathfinder_slope.csv", row.names=FALSE)
 
