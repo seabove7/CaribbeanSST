@@ -1065,9 +1065,11 @@ save(time, nc_times, file = "data/Pathfinder/Pathfinder_times.Rdata")# save the 
 ## Looking into autocorrelation of SST per pixel for maps:
 # I am testing for autocorrelation for a single pixel through the extire time series. If autocorrelation is present, I will then apply the updated model structure for all pixels in the function.
 
-test_point <- SpatialPoints(data.frame(x = -90.29731, y = 21.4517)) # testing with a single lat/lon point
+test_point <- SpatialPoints(data.frame(x = c(-90.29731, -90.5, -89.8), y = c(21.4517, 23, 22))) # testing with a single lat/lon point
 projection(test_point) <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
 test_raster <- raster::extract(data_brick2b, test_point) # extract all SST through time at this one point
+plot(raster(test_raster))
+xyFromCell(data_brick2b, 1)
 
 # create a dataframe of the extracted values and time
 test_sst <- data.frame(date = colnames(test_raster),
@@ -1113,25 +1115,37 @@ model.sel(sst_lm, gls_ac)
 ##########################################
 
 ## Remove NAs and convert to C
-KtoC <- function(x){round(x-273.15,2)} # converts the raster from Kelvin to Celsius
-NAset <- function(x){x[x < -54]<-NA; return(x)} # Pathfinder uses the value -54 (K) to denote missing data and this function replaces that with NA
+KtoC <- function(x){round((x - 273.15), 2)} # converts the raster from Kelvin to Celsius
+NAset <- function(x){x[x < -54] <- NA; return(x)} # Pathfinder uses the value -54 (K) to denote missing data and this function replaces that with NA
 data_brick2 <- calc(data_brick2, NAset) # apply the NA function written above to raster
 data_brick2b <- calc(data_brick2, KtoC) # apply the Kelvin function written above to raster
 
 
 data_brick2b[sapply(data_brick2b, is.infinite)] <- NA
 
+load("data/Pathfinder/Pathfinder_times.Rdata") # load the Pathfinder raster times
+
 
 ## Calculate slope of temperature change across time for each pixel
 # simple lm function applied to the raster brick to calculate the slope of temperature change over timescale of raster
-gls.fun2 <- function(x, time){
-  if(any(is.na(x))){NA} # this removes any NA pixels from the slope calculations 
-  else{
-    gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action = na.omit, control = list(singular.ok = TRUE))$coefficients[2]*60*60*24 # slope here is degrees/day
+#gls.fun2 <- function(x, time){
+#  if(any(is.na(x))){NA} # this removes any NA pixels from the slope calculations 
+#  else{
+#    gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action = na.omit, control = list(singular.ok = TRUE))$coefficients[2]*60*60*24 # slope here is degrees/day
+#    #print(x)
+#  }}
+
+
+gls.fun2 <- function(x, time, raster){
+  if (all(is.na(x[1:200]))){ NA }
+  else {
+    nlme::gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action = na.omit, control = list(singular.ok = TRUE))$coefficients[2]*60*60*24 # slope here is degrees/day
     #print(x)
+    #print(xyFromCell(raster, x))
   }}
 
-raster_slope2 <- calc(data_brick2b, function(x) gls.fun2(x, time = time)) # function applied here
+
+raster_slope2 <- calc(data_brick2, fun = function(x){gls.fun2(x, time = time, raster = data_brick2)}) # function applied here
 
 
 ## Create dataframe from calculated slope raster in C per decade for plotting
@@ -1163,6 +1177,7 @@ colnames(path_slope) <- c("sst", "x", "y")
 
 ## load in the edited pathfinder raster
 path_brick <- brick(Pathfinder_monthly_edit_path)
+load("data/Pathfinder/Pathfinder_times.Rdata") # also load the time layer
 
 ## function to pull the p value per pixel of the simple lm applied to the full HadISST raster brick 
 pval.fun <- function(x, time)
