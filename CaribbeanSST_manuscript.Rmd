@@ -1180,11 +1180,10 @@ path_brick <- brick(Pathfinder_monthly_edit_path)
 load("data/Pathfinder/Pathfinder_times.Rdata") # also load the time layer
 
 ## function to pull the p value per pixel of the simple lm applied to the full HadISST raster brick 
-pval.fun <- function(x, time)
-{
+pval.fun <- function(x, time){
   if(any(is.na(x))){NA}
   else{
-    summary(gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action = na.omit, control = list(singular.ok = TRUE))$tTable[2,4] # pulls the p value
+    summary(gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action = na.omit, control = list(singular.ok = TRUE)))$tTable[2,4] # pulls the p value
   }
 }
 raster_pval <- calc(data_brick, function(x)pval.fun(x, time = time))

@@ -28,6 +28,7 @@ Ymax<- 40
 # libraryies needed for running code:
 library(ncdf4)
 library(raster)
+library(nlme)
 
 ## Read in the Pathfinder monthly mean SST dataset (created using python)
 path_data <- "pathfinder_combined_monthly_data.nc"
@@ -73,14 +74,17 @@ data_brick2b <- calc(data_brick2, KtoC) # apply the Kelvin function written abov
 
 ### Slope Calculation
 ## Calculate slope of temperature change across time for each pixel
-# simple lm function applied to the raster brick to calculate the slope of temperature change over timescale of raster
-lm.fun <- function(x, time){
-  if(is.na(x)){NA} # this removes any NA values from the slope calculations 
+# gls function applied to the raster brick to calculate the slope of temperature change over timescale of raster (with account of temporal autocorrelation)
+gls.fun2 <- function(x, time){
+  if(all(is.na(x[1:200]))){ NA }
   else{
-    lm(x~time)$coefficients[2]*60*60*24 # slope here is degrees/day
+    nlme::gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action = na.omit, control = list(singular.ok = TRUE))$coefficients[2]*60*60*24 # slope here is degrees/day
+    #print(x)
+    #print(xyFromCell(raster, x))
   }}
 
-raster_slope2 <- calc(data_brick2, function(x)lm.fun(x, time = time)) # function applied here
+
+raster_slope2 <- calc(data_brick2b, function(x)lm.fun(x, time = time)) # function applied here
 
 ## Create dataframe from calculated slope raster in C per decade for plotting
 raster_slope2 <- raster_slope2*(365.25*10) # this is currently C per decade
@@ -90,16 +94,16 @@ colnames(path_slope) <- c("sst", "x", "y")
 
 ### P value Calculation
 ## function to pull the p value per pixel of the simple lm applied to the full HadISST raster brick 
-pval.fun <- function(x, time)
-{
+pval.fun <- function(x, time){
   if(any(is.na(x))){NA}
   else{
-    summary(lm(x ~ time))$coefficients[4] # pulls the p value
+    summary(nlme::gls(x ~ time, correlation = corAR1(form = ~ 1 | time), na.action = na.omit, control = list(singular.ok = TRUE)))$tTable[2,4] # pulls the p value
   }
 }
 
+
 ## function to pull the p value per pixel of the simple lm applied to the full Pathfinder raster brick 
-raster_pval2 <- calc(path_brick, function(x)pval.fun(x, time = time))
+raster_pval2 <- calc(data_brick2b, function(x)pval.fun(x, time = time))
 
 # convert the raster to a df for plotting
 path_pavl <- as.data.frame(as(raster_pval2, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
