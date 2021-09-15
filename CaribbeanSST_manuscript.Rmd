@@ -416,16 +416,7 @@ model.sel(sst_lm, gls_ac)
 
 ```{r HadISST lm map df creation}
 
-### simple lm function applied to the full HadISST raster brick
-#lm.fun <- function(x, time)
-#{
-#  if(any(is.na(x))){NA}
-#  else{
-#    lm(x~time)$coefficients[2]*60*60*24 # slope here is degrees/day
-#  }
-#}
-
-## Trying to pull slope from the gls with a correction for autocorrelation
+## Pull slope from the gls with a correction for autocorrelation (rate of SST change)
 gls.fun <- function(x, time)
 {
   if(any(is.na(x))){NA}
@@ -446,7 +437,7 @@ colnames(had_slope) <- c("sst", "x", "y")
 ########## Same idea, this time only being used on the 1981–2020 subset
 
 # apply the function
-raster_slopeb <- calc(data_brickb, function(x)lm.fun(x, time = timeb))
+raster_slopeb <- calc(data_brickb, function(x) gls.fun(x, time = timeb))
 
 # convert the raster to a dataframe for plotting
 raster_slope_sub <- raster_slopeb*(365.25*10) # this is currently C per decade
@@ -494,6 +485,16 @@ raster_pvalb <- calc(data_brickb, function(x)pval.fun(x, time = timeb))
 had_pval_sub <- as.data.frame(as(raster_pvalb, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
 colnames(had_pval_sub) <- c("pval", "x", "y")
 had_pval_sub$bins <- cut(had_pval_sub$pval, breaks = bins, labels = bin_names) # bins the pvales into 6 unique bins for plotting
+
+
+## And again for 1987–2020 for the rate since inflection:
+# apply the function
+raster_pval_87 <- calc(data_brick_87, function(x)pval.fun(x, time = time_87))
+
+# convert the raster to a df for plotting
+had_pval_87 <- as.data.frame(as(raster_pval_87, "SpatialPixelsDataFrame")) # convert to a raster to dataframe
+colnames(had_pval_87) <- c("pval", "x", "y")
+had_pval_87$bins <- cut(had_pval_87$pval, breaks = bins, labels = bin_names) # bins the pvales into 6 unique bins for plotting
 
 # --------- *Plotting occurs down at the bottom of the markdown file* --------- #
 
@@ -684,12 +685,12 @@ eco_sst_df <- data.frame('date' = integer(),
 #### Run the forloop in parallel (if able):
 
 ## Read in the HadISST netCDF and clip based on Caribbean bounds
-data_brick <- brick(had_data) # read SST data as rasterbrick
+data_brick <- brick("data/HadISST/HadISST_sst.nc") # read SST data as rasterbrick
 raster_brick <- crop(data_brick, extent(Xmin, Xmax, Ymin, Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
 layers <- raster_brick@data@nlayers
 
 for(e in 1:length(eco_list)) {
- 
+ e = 1
   ## First, select reefs within specific ecoregion 
   ecoregion_name <- eco_list[[e]] # pull the name of ecoregion
   subset_ecoreg <- ecoregions2[ecoregions2@data$ECOREGION == ecoregion_name, ] # subset for only the desired ecoregion
@@ -700,6 +701,7 @@ for(e in 1:length(eco_list)) {
     
     ## Read in the netCDF and clip based on Caribbean bounds
     data_brick <- brick("data/HadISST/HadISST_sst.nc") # read SST data as rasterbrick
+    #data_brick <- brick(had_data) # read SST data as rasterbrick (for running on local computer)
     raster_brick <- crop(data_brick, extent(Xmin, Xmax, Ymin, Ymax)) # clip rasterbrick for Caribbean region only (see 'spatial subsetting' above)
     
     ## Then, extract SST from reef locations wihtin the current ecoregion and append to dataframe
@@ -734,7 +736,7 @@ load("data/HadISST/HadISST_ecoregion_sst.Rdata")
 eco_sst_df$ecoregion <- gsub("Northern G", "G", eco_sst_df$ecoregion)
 eco_sst_df$ecoregion <- gsub("Southern G", "G", eco_sst_df$ecoregion)
 
-ecoregion_sst <- eco_sst_df %>% 
+%>% ecoregion_sst <- eco_sst_df %>% 
   group_by(ecoregion, date) %>% 
   summarise(mean_sst = mean(sst, na.rm = TRUE),
             max = max(sst, na.rm = TRUE),

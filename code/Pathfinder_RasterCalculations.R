@@ -20,10 +20,10 @@
 #### --- These should be copied from main script to ensure the correct bounds/restrictions are used
 
 ## spatial subsetting for Caribbean region (these match the bounds in the markdown)
-Xmin<- -95
-Xmax<- -55
-Ymin<- 0
-Ymax<- 40
+Xmin <- -100
+Xmax <- -55
+Ymin <- 0
+Ymax <- 40
 
 ## set the binning of p-values for plotting
 bins <- c(-Inf, 0.0001, 0.001, 0.01, 0.05, 0.1, Inf)
