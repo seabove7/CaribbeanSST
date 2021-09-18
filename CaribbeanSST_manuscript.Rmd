@@ -912,7 +912,7 @@ ggplot() +
   geom_text(aes(x = 1992, y = 23.9, label = "1994"), size = 3) +
   geom_line(data = had_predict_df, aes(x=year, y=response), lwd = 0.75) +
   geom_line(data = had_gam_slope, aes(x = year, y = value, colour = type), lwd = 0.75) +
-  scale_colour_manual(values = c("#4575b4", "#d73027")) +
+  scale_colour_manual(values = c( "#d73027")) +
   coord_cartesian(xlim = c(1870, 2020))
   ggsave("figures/Supplemental/FigS1_HadISST_GAM_slopes.pdf", width = 6, height = 3.75) 
   ggsave("figures/Supplemental/FigS1_HadISST_GAM_slopes.png", width = 6, height = 3.75)
@@ -1399,6 +1399,36 @@ Comparison of HadISST (1871–2020) and Pathfinder (1981-2019) SST recorded on C
 Historic SST trends on coral reefs within Caribbean ecoregions (1871–2020) with corresponding reef locations (see Figures 1, 3 in the main text). The colour of each reef location and box around long-term SST (HadISST) plots represent the designated ecoregion. Plots depict SST data with GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the mean SST over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean for the A) Bahamian, B) Eastern Caribbean, C) Floridian, D) Greater Antilles, E) Gulf of Mexico, F) Southern Caribbean, G) Southwestern Caribbean, and H) Western Caribbean ecoregions. 
 
 <br/>
+
+
+### Climate Stripes Figure
+
+```{r climate stripes}
+
+had_annual_df <- had_full %>% 
+  group_by(year) %>% 
+  summarise(mean = mean(mean_temp, na.rm = TRUE))
+
+
+stripes <- ggplot(data = had_annual_df, aes(x = year, y = 1, fill = mean, colour = mean)) +
+  theme_pubr() +
+  theme(legend.position = "none", axis.line = element_blank(), axis.ticks = element_blank(), axis.text.y = element_blank(), axis.title = element_blank()) +
+  theme(axis.text.x = element_text(vjust = 5)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient2(low = "#2166ac", high = "#b2182b", mid = "#dedede", midpoint = 27.3) +
+  scale_colour_gradient2(low = "#2166ac", high = "#b2182b", mid = "#dedede", midpoint = 27.3) +
+  scale_x_continuous(limits = c(1870, 2020), breaks = seq(1870, 2020, by = 30)) +
+  ggtitle("Caribbean coral reef temperatures 1870-2020")
+
+
+# Saves the manuscript version of the Pathfinder historic SST
+ggarrange(stripes)
+  ggsave("figures/Supplemental/FigS9_ClimateStripes.pdf", width = 6, height = 3.3)
+  ggsave("figures/Supplemental/FigS9_ClimateStripes.png", width = 6, height = 3.3)
+
+```
+
+Climate stripe diagram depicting the mean annual temperature recorded on Caribbean coral reefs from 1870 to 2020 based on the HadISST database. Warmer temperatures are depicted in red (maximum annual SST of `r max(had_annual_df$mean)`) and cooler annual temperatures are in blue (minimum annual SST of `r min(had_annual_df$mean)`). 
 
 
 ### HadISST GIF
