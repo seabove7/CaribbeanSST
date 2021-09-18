@@ -304,7 +304,7 @@ ggplot() +
 
 ```
 
-**Caribbean coral reef site locations and ecoregion designation.** The colour of each reef represents the designated ecoregion (Spalding et al. 2010) and n denotes the number of unique reefs within that ecoregion.
+**Caribbean coral reef site locations and ecoregion designation.** The colour of each reef represents the designated ecoregion and n denotes the number of unique reef locations within that ecoregion. Map layer was acquired from Natural Earth ([https://www.naturalearthdata.com](https://www.naturalearthdata.com)).
 
 <br/>
 
@@ -407,6 +407,10 @@ gls_ac <- gls(sst ~ year_month, data = test_sst,
               na.action=na.omit)
 
 summary(gls_ac)
+par(mfrow=c(2,2))
+plot(residuals(gls_ac))
+plot(gls_ac)
+
 
 
 library(MuMIn)
@@ -909,7 +913,9 @@ ggplot() +
   geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.35) + # max sst
   geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.35) + # min sst
   geom_rect(aes(ymin = -Inf, ymax = Inf, xmin = 1994, xmax = Inf), colour = 'black', fill = "#fee090", alpha = 0.2) +
-  geom_text(aes(x = 1992, y = 23.9, label = "1994"), size = 3) +
+  geom_rect(aes(ymin = -Inf, ymax = Inf, xmin = 1915, xmax = 1945), colour = 'black', fill = "#fee090", alpha = 0.2) +  
+  geom_text(aes(x = 1999, y = 23.9, label = "1994"), size = 3) +
+  geom_text(aes(x = 1920, y = 23.9, label = "1915"), size = 3) +
   geom_line(data = had_predict_df, aes(x=year, y=response), lwd = 0.75) +
   geom_line(data = had_gam_slope, aes(x = year, y = value, colour = type), lwd = 0.75) +
   scale_colour_manual(values = c( "#d73027")) +
@@ -919,7 +925,7 @@ ggplot() +
 
 ```
 
-Historic SST trend on Caribbean coral reefs (1871–2020). Long-term SST records (HadISST) on Caribbean coral reefs depicting significant changes in warming rate based on the first derivative of the GAM modelled slope. The GAM smoothed annual mean SST time is represented by the black line with significantly positive (red) or negative (blue) identified over the curve. The most recent significant warming event began in 1994 and is highlighted in the yellow box. The annual maximum (red line) and annual minimum (blue line) SST are also depicted, along with the overall mean SST for all sites over the entire period (27.3 °C; grey dashed line). The grey ribbon represents the 95% confidence interval around the true annual SST mean through time.
+Historic SST trend on Caribbean coral reefs (1871–2020). Long-term SST records (HadISST) on Caribbean coral reefs depicting significant changes in warming rate based on the first derivative of the GAM modeled slope. The GAM smoothed annual mean SST time is represented by the black line with significantly warming (red) identified over the curve. The most recent significant warming event began in 1994 and is highlighted in the yellow box. The annual maximum (red line) and annual minimum (blue line) SST are also depicted, along with the overall mean SST for all sites over the entire period (27.3 °C; grey dashed line). The grey ribbon represents the 95% confidence interval around the true annual SST mean through time.
 
 
 ```{r ecoregion GAM slope significance}
@@ -1391,6 +1397,41 @@ Comparison of HadISST (1871–2020) and Pathfinder (1981-2019) SST recorded on C
 
 <br/>
 
+### Figure S4
+
+```{r figure SX comparing SST on reefs between databases}
+
+had_subset <- filter(had_full, year > 1981 & year < 2020)
+path_subset <- filter(path_full, year > 1981 & year < 2020)
+
+
+combo_data <- data.frame(year = had_subset$year,
+                         Month = had_subset$month,
+                         HadISST = had_subset$mean_temp,
+                         Pathfinder = path_subset$mean_temp)
+
+## Linear regression of databases
+had_path_lm <- lm(Pathfinder ~ HadISST, data = combo_data)
+had_path_lm_sum <- summary(had_path_lm)
+
+
+## Plot the regression of databases
+ggplot(data = combo_data, aes(x = HadISST, y = Pathfinder)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), strip.background = element_blank(), text = element_text(size = 14), legend.position = c(0.07, 0.8), legend.background = element_blank()) +
+  geom_point(aes(colour = Month), alpha = 0.4, size = 3) +
+  scale_color_gradient2(midpoint = 9, low = "#2166ac", mid = "#d6604d", high = "#2166ac") +
+  geom_smooth(method = lm, se = FALSE, colour = "black") +
+  guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
+  labs(x = "HadISST (°C)", y = "Pathfinder (°C)") +
+  annotate("text", x = 29.7, y = 25, label = bquote(italic(R)^2 == .(format(had_path_lm_sum$adj.r.squared, digits = 2)))) +
+  annotate("text", x = 29.7, y = 24.7, label = "P < 0.001") + 
+  ggtitle("Monthly temperature comparison (1982 - 2019)")
+ggsave("figures/Supplemental/FigXX_PathVhadISST.pdf", width = 8, height = 5)
+ggsave("figures/Supplemental/FigXX_PathVhadISST.png", width = 8, height = 5)
+
+```
+
 
 ### Figure S4
 
@@ -1401,9 +1442,9 @@ Historic SST trends on coral reefs within Caribbean ecoregions (1871–2020) wit
 <br/>
 
 
-### Climate Stripes Figure
+### Figure S9
 
-```{r climate stripes}
+```{r climate stripes, fig.width = 6, fig.height = 3.3}
 
 had_annual_df <- had_full %>% 
   group_by(year) %>% 
@@ -1422,13 +1463,13 @@ stripes <- ggplot(data = had_annual_df, aes(x = year, y = 1, fill = mean, colour
 
 
 # Saves the manuscript version of the Pathfinder historic SST
-ggarrange(stripes)
+ggplotly(stripes)
   ggsave("figures/Supplemental/FigS9_ClimateStripes.pdf", width = 6, height = 3.3)
   ggsave("figures/Supplemental/FigS9_ClimateStripes.png", width = 6, height = 3.3)
 
 ```
 
-Climate stripe diagram depicting the mean annual temperature recorded on Caribbean coral reefs from 1870 to 2020 based on the HadISST database. Warmer temperatures are depicted in red (maximum annual SST of `r max(had_annual_df$mean)`) and cooler annual temperatures are in blue (minimum annual SST of `r min(had_annual_df$mean)`). 
+Climate stripe diagram depicting the mean annual temperature recorded on Caribbean coral reefs from 1870 to 2020 based on the HadISST database. Warmer temperatures are depicted in red (maximum annual SST of `r round(max(had_annual_df$mean), 2)`) and cooler annual temperatures are in blue (minimum annual SST of `r round(min(had_annual_df$mean), 2)`). 
 
 
 ### HadISST GIF
@@ -1512,6 +1553,7 @@ path_map_markdown <- ggplot() +
 
 
 
+
 ## Clip Pathfinder pvalues by MHW bounds
 path_pavl <- read.csv("data/Pathfinder/Pathfinder_pval.csv", header = TRUE) # read in the saved .csv of the dataframe
 path_pavl <- path_pavl[c(2,3,1, 4)] # just reordering the dataframe
@@ -1519,6 +1561,8 @@ coordinates(path_pavl) <- c("x", "y") # transform lat/lon to SpatialPointsDataFr
 projection(path_pavl) <- proj # modify projection to match Pathfinder
 pathP_clipped <- path_pavl[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
 pathP_slope_clipped <- as.data.frame(pathP_clipped) # convert to dataframe
+pathP_slope_clipped$bins <- factor(pathP_slope_clipped$bins, levels = c("< 0.0001", "0.0001 - 0.001", "0.001 - 0.01", "0.01 - 0.05", "0.05 - 0.1", "> 0.1"))
+
 
 ## Plot Pathfinder significance map
 path_pval_map <- ggplot() +  
@@ -1561,8 +1605,10 @@ MHW_trends <- read_rds(MHW_path) # load in trend data
 MHW_trends$lon <- MHW_trends$lon- 360 # convert lon back into -180 to 180
 
 # add a second pval column- for the breaks used in the map_p plot below
-MHW_trends <- MHW_trends %>% 
-  mutate(pvalb = cut(p, breaks = c(0, 0.001, 0.01, 0.05, .10, .50, 1)))
+#MHW_trends <- MHW_trends %>% 
+#  mutate(pvalb = cut(p, breaks = c(0, 0.001, 0.01, 0.05, .10, .50, 1)))
+MHW_trends$bins <- cut(MHW_trends$p, breaks = bins, labels = bin_names) # bins the pvales into 6 unique bins for plotting
+MHW_trends$bins <- factor(MHW_trends$bins, levels = c("< 0.0001", "0.0001 - 0.001", "0.001 - 0.01", "0.01 - 0.05", "0.05 - 0.1", "> 0.1"))
 
 
 ## MHW slopes map
@@ -1601,8 +1647,8 @@ mhw_map_markdown <- ggplot(MHW_trends, aes(x = lon, y = lat)) +
 map_p <- ggplot(MHW_trends, aes(x = lon, y = lat)) + 
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom", text = element_text(size = 15), title = element_text(size = 13)) +
-  geom_raster(aes(fill = pvalb), interpolate = FALSE) +
-  scale_fill_brewer("p-value", palette = "PuBu", direction = -1, breaks = c("(0,0.001]", "(0.001,0.01]", "(0.01,0.05]", "(0.05,0.1]", "(0.1,0.5]", "(0.5,1]")) +
+  geom_raster(aes(fill = bins), alpha=0.8, interpolate = FALSE) +
+  scale_fill_brewer("p-value", palette = "PuBu", direction = -1) +
   geom_polygon(data = map_base, aes(group = group), colour = "#575757", fill = "grey81") +
   theme(panel.background = element_rect(fill = "grey95")) +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
@@ -1613,13 +1659,14 @@ map_p <- ggplot(MHW_trends, aes(x = lon, y = lat)) +
 mhw_pval_markdown <- ggplot(MHW_trends, aes(x = lon, y = lat)) + 
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1), legend.position = "bottom") +
-  geom_raster(aes(fill = pvalb), interpolate = FALSE) +
-  scale_fill_brewer("p-value", palette = "PuBu", direction = -1, breaks = c("(0,0.001]", "(0.001,0.01]", "(0.01,0.05]", "(0.05,0.1]", "(0.1,0.5]", "(0.5,1]")) +
+  geom_raster(aes(fill = bins), alpha=0.8, interpolate = FALSE) +
+  scale_fill_brewer("p-value", palette = "PuBu", direction = -1) +
   geom_polygon(data = map_base, aes(group = group), colour = "#575757", fill = "grey81") +
   theme(panel.background = element_rect(fill = "grey95")) +
   coord_sf(xlim = c(-100,-55), ylim = c(7.65,33), expand = FALSE) +
   labs(x = "", y = "") +
   ggtitle("Change in MHW frequency (1981-2018)")
+
 
 ```
 
@@ -1634,7 +1681,7 @@ ggarrange(path_map_markdown, mhw_map_markdown, labels = c("A", "B"))
 
 ```
 
-**Warming patterns throughout the Caribbean Sea.** Increasing warming events across the Caribbean depicted through **A**) rate of SST change (°C per decade) from 1981 to 2019 (Pathfinder; mean slope `r round(mean(path_slope_clipped$sst), 2)` ± `r round(sd(path_slope_clipped$sst), 3)` °C per decade) and **B**) increasing marine heatwave events (slope of counts per year). Grey ocean area was not included in these analyses.
+**Warming patterns throughout the Caribbean Sea.** Increasing warming events across the Caribbean depicted through A) rate of SST change (°C per decade) from 1981 to 2019 (Pathfinder; mean slope `r round(mean(path_slope_clipped$sst), 2)` ± `r round(sd(path_slope_clipped$sst), 3)` °C per decade) and B) increasing marine heatwave events (slope of counts per year). Grey ocean area was not included in these analyses. Map layer was acquired from Natural Earth ([https://www.naturalearthdata.com](https://www.naturalearthdata.com)).
 
 ---
 
@@ -1944,6 +1991,7 @@ coordinates(had_pavl_b) <- c("x", "y") # transform lat/lon to SpatialPointsDataF
 projection(had_pavl_b) <- proj # modify projection to match Pathfinder
 had_p_clipped <- had_pavl_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
 had_pavl_clipped <- as.data.frame(had_p_clipped) # convert to dataframe
+had_pavl_clipped$bins <- factor(had_pavl_clipped$bins, levels = c("< 0.0001", "0.0001 - 0.001", "0.001 - 0.01", "0.01 - 0.05", "0.05 - 0.1", "> 0.1"))
 
 
 ## Plot the map
@@ -1986,6 +2034,7 @@ projection(had_slope_sub_b) <- proj # modify projection to match Pathfinder
 had_s_slope_clipped <- had_slope_sub_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
 had_slope_sub_clipped <- as.data.frame(had_s_slope_clipped) # convert to dataframe
 
+
 ## Plot the map
 had_map_sub <- ggplot() +  
   theme_bw() +
@@ -2009,6 +2058,7 @@ coordinates(had_pval_sub_b) <- c("x", "y") # transform lat/lon to SpatialPointsD
 projection(had_pval_sub_b) <- proj # modify projection to match Pathfinder
 had_p_sub_clipped <- had_pval_sub_b[bound_SP_df, ] # clip the Pathfinder SST slope by the new MHW bounds
 had_pval_sub_b_clipped <- as.data.frame(had_p_sub_clipped) # convert to dataframe
+had_pval_sub_b_clipped$bins <- factor(had_pval_sub_b_clipped$bins, levels = c("< 0.0001", "0.0001 - 0.001", "0.001 - 0.01", "0.01 - 0.05", "0.05 - 0.1", "> 0.1"))
 
 
 ## Plot the map
