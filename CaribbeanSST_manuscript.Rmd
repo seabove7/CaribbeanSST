@@ -1399,7 +1399,7 @@ Comparison of HadISST (1871–2020) and Pathfinder (1981-2019) SST recorded on C
 
 ### Figure S4
 
-```{r figure SX comparing SST on reefs between databases}
+```{r figure S4 comparing SST on reefs between databases}
 
 had_subset <- filter(had_full, year > 1981 & year < 2020)
 path_subset <- filter(path_full, year > 1981 & year < 2020)
@@ -1427,22 +1427,26 @@ ggplot(data = combo_data, aes(x = HadISST, y = Pathfinder)) +
   annotate("text", x = 29.7, y = 25, label = bquote(italic(R)^2 == .(format(had_path_lm_sum$adj.r.squared, digits = 2)))) +
   annotate("text", x = 29.7, y = 24.7, label = "P < 0.001") + 
   ggtitle("Monthly temperature comparison (1982 - 2019)")
-ggsave("figures/Supplemental/FigXX_PathVhadISST.pdf", width = 8, height = 5)
-ggsave("figures/Supplemental/FigXX_PathVhadISST.png", width = 8, height = 5)
+ggsave("figures/Supplemental/Fig4_PathVhadISST.pdf", width = 8, height = 5)
+ggsave("figures/Supplemental/Fig4_PathVhadISST.png", width = 8, height = 5)
 
 ```
 
+Comparison of monthly SST (°C) recorded in the HadISST and Pathfinder databases from 1982-2019. SST values were regressed against one another for the same time for comparison of the relationship between the databases. Points are depicted by month (cooler months in blue and warmer months in red) and the black line represents the resulting linear regression model (R^2^ = `r round(had_path_lm_sum$adj.r.squared, 2)`; P < 0.001).
 
-### Figure S4
+<br/>
 
-![](figures/Supplemental/FigS4_Ecoregion_MapSST.png)
+
+### Figure S5
+
+![](figures/Supplemental/FigS5_Ecoregion_MapSST.png)
 
 Historic SST trends on coral reefs within Caribbean ecoregions (1871–2020) with corresponding reef locations (see Figures 1, 3 in the main text). The colour of each reef location and box around long-term SST (HadISST) plots represent the designated ecoregion. Plots depict SST data with GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the mean SST over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean for the A) Bahamian, B) Eastern Caribbean, C) Floridian, D) Greater Antilles, E) Gulf of Mexico, F) Southern Caribbean, G) Southwestern Caribbean, and H) Western Caribbean ecoregions. 
 
 <br/>
 
 
-### Figure S9
+### Figure S10
 
 ```{r climate stripes, fig.width = 6, fig.height = 3.3}
 
@@ -1464,8 +1468,8 @@ stripes <- ggplot(data = had_annual_df, aes(x = year, y = 1, fill = mean, colour
 
 # Saves the manuscript version of the Pathfinder historic SST
 ggplotly(stripes)
-  ggsave("figures/Supplemental/FigS9_ClimateStripes.pdf", width = 6, height = 3.3)
-  ggsave("figures/Supplemental/FigS9_ClimateStripes.png", width = 6, height = 3.3)
+  ggsave("figures/Supplemental/FigS10_ClimateStripes.pdf", width = 6, height = 3.3)
+  ggsave("figures/Supplemental/FigS10_ClimateStripes.png", width = 6, height = 3.3)
 
 ```
 
@@ -1931,14 +1935,14 @@ ggarrange(plot_freq_pixel, plot_dur_pixel, plot_rt_pixel, ncol = 3, labels = "AU
 <br/>
 
 
-### Figure S5
+### Figure S6
 
 ```{r combined SST and MHW p value maps}
 
 ## Combined p values:
-FigureS5 <- ggarrange(path_pval_map, map_p, align = "hv", labels = c("A", "B"))
-  ggsave("figures/Supplemental/FigS5_SST_MHW_significance_map.pdf", width = 14.5, height = 5)
-  ggsave("figures/Supplemental/FigS5_SST_MHW_significance_map.png", width = 14.5, height = 5)
+FigureS6 <- ggarrange(path_pval_map, map_p, align = "hv", labels = c("A", "B"))
+  ggsave("figures/Supplemental/FigS6_SST_MHW_significance_map.pdf", width = 14.5, height = 5)
+  ggsave("figures/Supplemental/FigS6_SST_MHW_significance_map.png", width = 14.5, height = 5)
 
 # markdown version of plot
 ggarrange(path_pval_markdown, mhw_pval_markdown, align = "hv", labels = c("A", "B")) 
@@ -1952,7 +1956,7 @@ Significance of **A**) rate of SST change (°C per decade) and **B**) number of 
 <br/>
 
 
-### Figure S6
+### Figure S7
 
 ```{r HadISST full SST map, message=FALSE, warning=FALSE}
 
@@ -2011,8 +2015,8 @@ had_pval_map <- ggplot() +
 ```{r HadISST full SST map combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
 ggarrange(had_map, had_pval_map, labels = c("A", "B"))
-  ggsave("figures/Supplemental/FigS6_HadISST_map.pdf", width = 14, height = 5)
-  ggsave("figures/Supplemental/FigS6_HadISST_map.png", width = 14, height = 5)
+  ggsave("figures/Supplemental/FigS7_HadISST_map.pdf", width = 14, height = 5)
+  ggsave("figures/Supplemental/FigS7_HadISST_map.png", width = 14, height = 5)
 
 ```
 
@@ -2023,7 +2027,7 @@ ggarrange(had_map, had_pval_map, labels = c("A", "B"))
 <br/>
 
 
-### Figure S7
+### Figure S8
 
 ```{r HadISST SST map subset (1981-2019), message=FALSE, warning=FALSE}
 
@@ -2078,8 +2082,8 @@ had_pval_map_sub <- ggplot() +
 ```{r HadISST SST map subset combo, message=FALSE, warning=FALSE, fig.align='center', fig.width=12, fig.height=6}
 
 ggarrange(had_map_sub, had_pval_map_sub, labels = c("A", "B"))
-  ggsave("figures/Supplemental/FigS7_HadISST_subset_map.pdf", width = 14, height = 5)
-  ggsave("figures/Supplemental/FigS7_HadISST_subset_map.png", width = 14, height = 5)
+  ggsave("figures/Supplemental/FigS8_HadISST_subset_map.pdf", width = 14, height = 5)
+  ggsave("figures/Supplemental/FigS8_HadISST_subset_map.png", width = 14, height = 5)
 
 ```
 
@@ -2090,7 +2094,7 @@ ggarrange(had_map_sub, had_pval_map_sub, labels = c("A", "B"))
 <br/>
 
 
-### Figure S8
+### Figure S9
 
 
 ```{r MHW frequency by ecoregion}
@@ -2209,16 +2213,16 @@ plot_totalDays_region <- ggplot(data = mhw_pixel %>% filter(!is.na(total_MHW_day
 ```
 
 
-```{r combine and save MHWs by ecoregion for Fig S8, fig.width = 12, fig.height = 10}
+```{r combine and save MHWs by ecoregion for Fig S9, fig.width = 12, fig.height = 10}
 
 ## Final combined MHW plot and save it
 ggarrange(plot_freq_region, plot_dur_region, plot_rt_region, plot_int_region, plot_onset_region, plot_totalDays_region, ncol = 1, heights = c(0.85, 0.75, 0.75, 0.75, 0.75, 0.95))
-  ggsave("figures/Supplemental/FigS8_MHW_ecoregion_metrics.pdf", width = 16, height = 12)
-  ggsave("figures/Supplemental/FigS8_MHW_ecoregion_metrics.png", width = 16, height = 12)
+  ggsave("figures/Supplemental/FigS9_MHW_ecoregion_metrics.pdf", width = 16, height = 12)
+  ggsave("figures/Supplemental/FigS9_MHW_ecoregion_metrics.png", width = 16, height = 12)
 
 ```
 
-MHW trends (1981–2018) across Caribbean coral reefs by ecoregion. Temperature data are based on OISST gridded data to determine frequency (number events per year), duration (number days per event), return time (number days per event) since the previous event, onset rate (°C per day) from start until peak intensity, peak intensity (°C), and total days reefs experience MHWs per year. Points denote annual mean values (±SD) and blue lines represent linear (lm or glm) trends within each ecoregion (see Figures 1, S4 for ecoregion locations). Frequency, duration, and return time across all Caribbean coral reefs are depicted in Figure 5 in the main text. 
+MHW trends (1981–2018) across Caribbean coral reefs by ecoregion. Temperature data are based on OISST gridded data to determine frequency (number events per year), duration (number days per event), return time (number days per event) since the previous event, onset rate (°C per day) from start until peak intensity, peak intensity (°C), and total days reefs experience MHWs per year. Points denote annual mean values (±SD) and blue lines represent linear (lm or glm) trends within each ecoregion (see Figures 1, S5 for ecoregion locations). Frequency, duration, and return time across all Caribbean coral reefs are depicted in Figure 5 in the main text. 
 
 ---
 
@@ -2385,7 +2389,7 @@ kable(table_1, booktabs = TRUE, row.names = FALSE, col.names = c("Temperature pa
 
 
 ### Table S2
-**Table S2.** Mean ocean warming rate (°C per decade; with 95% confidence interval) and total increase in temperature (°C) on coral reefs within each Caribbean ecoregion since the noted year of inflection point. The inflection point for each ecoregion was identified as the year in which annual warming rates noticeably increased based on the GAM smoothed annual means (**see Figures 3 and S5**). Years indicated with an asterisk (*) represent inflection points identified for ecoregions that occurred before the Pathfinder dataset record, therefore those rates and total warming values were calculated from the beginning of the record in 1981.  
+**Table S2.** Mean ocean warming rate (°C per decade; with 95% confidence interval) and total increase in temperature (°C) on coral reefs within each Caribbean ecoregion since the noted year of inflection point. The inflection point for each ecoregion was identified as the year in which annual warming rates noticeably increased based on the GAM smoothed annual means (**see Figures 3 and S6**). Years indicated with an asterisk (*) represent inflection points identified for ecoregions that occurred before the Pathfinder dataset record, therefore those rates and total warming values were calculated from the beginning of the record in 1981.  
 
 ```{r Pathfinder ecoregion SST dataframe construction}
 
@@ -2629,7 +2633,7 @@ writeData(wb, sheet = 3, x = mhw_mod_out)
 setColWidths(wb, sheet = 3, cols = 1:5, widths = "auto")
 
 ## add 'Table S5' worksheet
-addWorksheet(wb, "Table S4 - MHW metrics") 
+addWorksheet(wb, "Table S5 - MHW metrics") 
 writeData(wb, sheet = 4, x = mhw_decade_full)
 setColWidths(wb, sheet = 4, cols = 1:5, widths = "auto")
 
