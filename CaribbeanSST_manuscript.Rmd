@@ -1311,6 +1311,19 @@ path_gam_df <- path_gam_df %>% separate(date, c("year", "month","day"), convert 
 path_gam_df <- subset(path_gam_df, year != "2020") # exclude 2020 data
 
 
+## Pathfinder GAMM:
+path_gam <- gamm(sst ~ s(year, bs = 'cr', k = 9) + s(month, bs = 'cc', k = 12), data = path_gam_df)
+
+## Below is model checking for GAMs that should be checked out before proceeding when fitting a new GAM
+layout(matrix(1:4, ncol = 2))
+summary(path_gam$gam)
+gam.check(path_gam$gam)
+plot(path_gam$gam)
+qq.gam(path_gam)
+
+path_gam_pred <- predict.gam(path_gam$gam, type = "response", se.fit = TRUE, exclude = s(month)) # predict response-level values from the GAM per year
+path_predict_df <- cbind(path_gam_df, response = path_gam_pred$fit, lwr = path_gam_pred$fit - 2 * path_gam_pred$se.fit, upr = path_gam_pred$fit + 2 * path_gam_pred$se.fit) # add the predicted fit and lower/upper CIs to the GAM dataframe
+
 #### Data visualization per year across months #### 
 
 # calculate summary statistic per month across years
@@ -1817,7 +1830,7 @@ names(eco_labs) <- c("Bahamian", "Eastern Caribbean", "Floridian", "Greater Anti
 
 # GLM model:
 pixel_frequency_glm <- glm(total_events ~ year, poisson(link = "log"), data = mhw_pixel %>% filter(!is.na(total_events)))
-#summary(pixel_frequency_glm)
+
 #tab_model(pixel_frequency_glm, show.se = TRUE, show.ci = FALSE, show.stat = TRUE, show.obs = FALSE, transform = NULL, dv.labels = "Frequency")
 freq_mod <- tidy(pixel_frequency_glm)
 
@@ -1825,8 +1838,11 @@ frequency_df <- mhw_pixel %>%
   filter(!is.na(total_events)) %>% 
   add_predictions(pixel_frequency_glm, type = "response")
 
+
 # Diagnosis of model:
-#check_model(pixel_frequency_glm)
+#check_model(pixel_frequency_nb)
+#summary(pixel_frequency_glm)
+
 
 # make label of  R2 value for plot:
 freq_r2 <- NagelkerkeR2(pixel_frequency_glm)[[2]]
@@ -1843,6 +1859,8 @@ plot_freq_pixel <- ggplot(data=frequency_df, aes(x= year, y= total_events)) +
   stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1), geom = "errorbar", width = 0) +
   stat_summary(fun = "mean", size = 0.3) +
   geom_line(aes(x = year, y = pred), colour = "steelblue", size = 1) +
+  geom_line(data = frequency_df2, aes(x = year, y = pred), colour = "red", size = 0.5) +
+  geom_line(data = frequency_df3, aes(x = year, y = pred), colour = "green", size = 0.5) +
   annotate(geom = "text", size = 2.8, x = 1985, y = 10, label = freq_rlab, parse=TRUE, colour = "grey20") +
   expand_limits(x = c(1980, 2020)) +  
   labs(x="Year", y="Frequency")
@@ -1856,12 +1874,14 @@ plot_freq_pixel <- ggplot(data=frequency_df, aes(x= year, y= total_events)) +
 
 # LM model:
 pixel_duration_lm <- lm(log(avg_duration) ~ year, data = mhw_pixel %>% filter(!is.na(avg_duration)))
-#summary(pixel_duration_lm)
+
 #tab_model(pixel_duration_lm, show.se = TRUE, show.ci = FALSE, show.stat = TRUE, show.obs = FALSE, dv.labels = "Duration")
 dur_mod <- tidy(pixel_duration_lm)
   
 # Diagnosis of model:
-#check_model(pixel_duration_lm)
+check_model(pixel_duration_lm)
+#summary(pixel_duration_lm)
+
 
 # make label of  R2 value for plot:
 dur_r2 <- summary(pixel_duration_lm)$r.squared
@@ -1896,7 +1916,7 @@ pixel_rt_lm <- lm(log(avg_rt) ~ year, data = mhw_pixel %>% filter(!is.na(avg_rt)
 rt_mod <- tidy(pixel_rt_lm)
 
 # Diagnosis of model:
-#check_model(pixel_rt_lm)
+check_model(pixel_rt_lm)
 
 # make label of  R2 value for plot:
 rt_r2 <- summary(pixel_rt_lm)$r.squared
@@ -2139,8 +2159,8 @@ plot_dur_region <- ggplot(data = mhw_pixel, aes(x = year, y = avg_duration)) +
 ```{r MHW return time by ecoregion}
 
 ## Modelling per ecoregion
-pixel_duration_eco <- lme4::lmList(log(avg_rt) ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(avg_rt)))
-#summary(pixel_duration_eco)
+pixel_rt_eco <- lme4::lmList(log(avg_rt) ~ year | ecoregion, data = mhw_pixel %>% filter(!is.na(avg_rt)))
+#summary(pixel_rt_eco)
 
 plot_rt_region <- ggplot(data = mhw_pixel, aes(x = year, y = avg_rt)) + 
   theme_bw() +
