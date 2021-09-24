@@ -1,5 +1,5 @@
 ---
-title: '**One Hundred and Fifty Years of Warming on Caribbean Coral Reefs**'
+title: '**A century of warming on Caribbean reefs**'
 output:
  rmarkdown::html_document:
     theme: yeti
@@ -167,7 +167,7 @@ MHW_carib_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/
 
 #### **Abstract:**
 
-Anthropogenic climate change is rapidly altering the characteristics and dynamics of biological communities. This is especially apparent in marine systems as the world’s oceans are warming at an unprecedented rate, causing dramatic changes to coastal marine systems, especially on coral reefs of the Caribbean. We used three complementary ocean temperature databases (HadISST, Pathfinder, and OISST) to quantify change in thermal characteristics of Caribbean coral reefs over the last 150 years (1871–2020). These sea surface temperature (SST) databases included combined in situ and satellite-derived SST (HadISST, OISST), as well as satellite-only observations (Pathfinder) at multiple spatial resolutions. We also compiled a Caribbean coral reef database identifying 5,326 unique reefs across the region. We found that Caribbean reefs have warmed on average by 0.20 °C per decade since 1994, the calculated year that rapid warming began on Caribbean reefs. Further, geographic variation in warming rates ranged from 0.17 °C per decade on Bahamian reefs to 0.26 °C per decade on reefs within the Southern and Eastern Caribbean ecoregions. If this linear rate of warming continues, these already threatened ecosystems would warm by an additional 1.6 °C on average by 2100. We also found that marine heatwave (MHW) events are increasing in both frequency and duration across the Caribbean. Caribbean coral reefs now experience on average 5 MHW events annually, compared to 1 per year in the early 1980s. Combined, these changes have caused a dramatic shift in the composition and function of Caribbean coral reef ecosystems. If reefs continue to warm at this rate, we are likely to lose even the remnant Caribbean coral reef communities of today in the coming decades.  
+The world’s oceans are warming at an unprecedented rate, causing dramatic changes to coastal marine systems, especially on coral reefs. We used three complementary ocean temperature databases (HadISST, Pathfinder, and OISST) to quantify change in thermal characteristics of Caribbean coral reefs over the last 150 years (1871–2020). These sea surface temperature (SST) databases included combined in situ and satellite-derived SST (HadISST, OISST), as well as satellite-only observations (Pathfinder) at multiple spatial resolutions. We also compiled a Caribbean coral reef database identifying 5,326 unique reefs across the region. We found that Caribbean reefs began warming in 1915 and have warmed on average by 0.19 °C per decade since 1994 (the calculated year that warming accelerated). Geographic variation in warming rates ranged from 0.17 °C per decade on Bahamian reefs to 0.26 °C per decade on reefs within the Southern and Eastern Caribbean ecoregions. If this linear rate of warming continues, these already threatened ecosystems would warm by an additional 1.5°C on average by 2100. We also found that marine heatwave (MHW) events are increasing in both frequency and duration across the Caribbean. Caribbean coral reefs now experience on average 5 MHW events annually, compared to 1 per year in the early 1980s, with recent events lasting on average 14 days. These changes in the thermal environment, in addition to other stressor including fishing and pollution, have caused a dramatic shift in the composition and functioning of Caribbean coral reef ecosystems.
 
 <br/>
 
@@ -304,7 +304,7 @@ ggplot() +
 
 ```
 
-**Caribbean coral reef site locations and ecoregion designation.** The colour of each reef represents the designated ecoregion and n denotes the number of unique reef locations within that ecoregion. Map layer was acquired from Natural Earth ([https://www.naturalearthdata.com](https://www.naturalearthdata.com)).
+**Fig 1. Caribbean coral reef site locations and ecoregion designation.** The colour of each reef represents the designated ecoregion and n denotes the number of unique reef locations within that ecoregion. Map layer was acquired from Natural Earth ([https://www.naturalearthdata.com](https://www.naturalearthdata.com)).
 
 <br/>
 
@@ -667,7 +667,7 @@ ggarrange(had_month_plot, had_year_plot, ncol = 1, labels = c("A", "B"), align =
 
 ```
 
-**Historic SST trend on Caribbean coral reefs (1871–2020).** Long-term SST records (HadISST) on Caribbean coral reefs depicting **A**) mean monthly SST each year (represented by line colour: blue to red) and **B**) GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the overall mean SST for all sites over the entire period (27.3 °C) and the grey ribbon represents the 95% confidence interval around the true annual SST mean through time.
+**Fig 2. Historic SST trend on Caribbean coral reefs (1871–2020).** Long-term SST records (HadISST) on Caribbean coral reefs depicting **A**) mean monthly SST each year (represented by line colour: blue to red) and **B**) GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the overall mean SST for all sites over the entire period (27.3 °C) and the grey ribbon represents the 95% confidence interval around the annual mean SST through time.
 
 <br/>
 
@@ -827,10 +827,41 @@ ggplot() +
 
 ```
 
-**Historic SST trends on coral reefs within ecoregions (1871–2019).** Long-term SST records (HadISST) on Caribbean coral reefs separated by ecoregion depicting GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the mean SST over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean for each ecoregion.
+**Fig 3. Historic SST trends on coral reefs within ecoregions (1871–2020).** Long-term SST records (HadISST) on Caribbean coral reefs separated by ecoregion depicting GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the mean SST over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean for each ecoregion.
 
 <br/>
 
+
+### <span style="color: #0072B2;">**Figure 6**</span>
+
+```{r climate stripes, fig.width = 6, fig.height = 3.3}
+
+had_annual_df <- had_full %>% 
+  group_by(year) %>% 
+  summarise(mean = mean(mean_temp, na.rm = TRUE))
+
+
+stripes <- ggplot(data = had_annual_df, aes(x = year, y = 1, fill = mean, colour = mean)) +
+  theme_pubr() +
+  theme(legend.position = "none", axis.line = element_blank(), axis.ticks = element_blank(), axis.text.y = element_blank(), axis.title = element_blank()) +
+  theme(axis.text.x = element_text(vjust = 5)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient2(low = "#2166ac", high = "#b2182b", mid = "#dedede", midpoint = 27.3) +
+  scale_colour_gradient2(low = "#2166ac", high = "#b2182b", mid = "#dedede", midpoint = 27.3) +
+  scale_x_continuous(limits = c(1870, 2020), breaks = seq(1870, 2020, by = 30)) +
+  ggtitle("Caribbean coral reef temperatures 1870-2020")
+
+
+# Saves the manuscript version of the Pathfinder historic SST
+ggplotly(stripes)
+  ggsave("figures/Manuscript/Fig6_ClimateStripes.pdf", width = 6, height = 3.3)
+  ggsave("figures/Manuscript/Fig6_ClimateStripes.png", width = 6, height = 3.3)
+
+```
+
+**Fig 6.** Climate stripe diagram depicting the mean annual temperature recorded on Caribbean coral reefs based on the HadISST database. Warmer temperatures are depicted in red (maximum annual SST of 28.0) and cooler annual temperatures are in blue (minimum annual SST of 26.6) (figure inspired by Professor Ed Hawkins [Show Your Stripes](https://showyourstripes.info/)).
+
+<br/>
 
 ### Figure S1
 
@@ -925,7 +956,7 @@ ggplot() +
 
 ```
 
-Historic SST trend on Caribbean coral reefs (1871–2020). Long-term SST records (HadISST) on Caribbean coral reefs depicting significant changes in warming rate based on the first derivative of the GAM modeled slope. The GAM smoothed annual mean SST time is represented by the black line with significantly warming (red) identified over the curve. The most recent significant warming event began in 1994 and is highlighted in the yellow box. The annual maximum (red line) and annual minimum (blue line) SST are also depicted, along with the overall mean SST for all sites over the entire period (27.3 °C; grey dashed line). The grey ribbon represents the 95% confidence interval around the true annual SST mean through time.
+**Supplemental Figure 1.** Historic SST trend on Caribbean coral reefs (1871–2020). Long-term SST records (HadISST) on Caribbean coral reefs depicting significant changes in warming rate based on the first derivative of the GAM slope. The GAM smoothed annual mean SST time is represented by the black line with significantly warming (red) identified over the curve. The most recent significant warming event began in 1987 and is highlighted in the yellow box. The annual maximum (red line) and annual minimum (blue line) SST are also depicted, along with the overall mean SST for all sites over the entire period (27.3 °C; grey dashed line). The grey ribbon represents the 95% confidence interval around the true annual SST mean through time.
 
 
 ```{r ecoregion GAM slope significance}
@@ -1315,13 +1346,13 @@ path_gam_df <- subset(path_gam_df, year != "2020") # exclude 2020 data
 path_gam <- gamm(sst ~ s(year, bs = 'cr', k = 9) + s(month, bs = 'cc', k = 12), data = path_gam_df)
 
 ## Below is model checking for GAMs that should be checked out before proceeding when fitting a new GAM
-layout(matrix(1:4, ncol = 2))
-summary(path_gam$gam)
-gam.check(path_gam$gam)
-plot(path_gam$gam)
-qq.gam(path_gam)
+#layout(matrix(1:4, ncol = 2))
+#summary(path_gam$gam)
+#gam.check(path_gam$gam)
+#plot(path_gam$gam)
+#qq.gam(path_gam)
 
-path_gam_pred <- predict.gam(path_gam$gam, type = "response", se.fit = TRUE, exclude = s(month)) # predict response-level values from the GAM per year
+path_gam_pred <- predict.gam(path_gam$gam, type = "response", se.fit = TRUE, exclude = s(month), newdata = path_gam_df[1:2]) # predict response-level values from the GAM per year
 path_predict_df <- cbind(path_gam_df, response = path_gam_pred$fit, lwr = path_gam_pred$fit - 2 * path_gam_pred$se.fit, upr = path_gam_pred$fit + 2 * path_gam_pred$se.fit) # add the predicted fit and lower/upper CIs to the GAM dataframe
 
 #### Data visualization per year across months #### 
@@ -1367,52 +1398,14 @@ ggarrange(path_month_plot, path_year_plot, ncol = 1, labels = c("A", "B"), align
 
 ```
 
-Historic SST records (1981-2019; Pathfinder) on Caribbean coral reefs depicting **A**) mean monthly SST each year (represented by line colour: blue to red) and **B**) GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the overall mean SST for all sites over the entire period (27.23 °C) and the grey ribbon represents the 95% confidence interval around the true annual SST mean through time. 
+**Supplemental Figure 2.** Historic SST records (1981-2019; Pathfinder) on Caribbean coral reefs depicting **A**) mean monthly SST each year (represented by line colour: blue to red) and **B**) GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the overall mean SST for all sites over the entire period (27.23 °C) and the grey ribbon represents the 95% confidence interval around the true annual SST mean through time. 
 
 <br/>
 
 
 ### Figure S3
 
-```{r combined annual SST plot}
-
-## plot with smoothed trend
-combo_plot <- ggplot() +
-  theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
-  # add the HadISST dataset
-  geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "darkgrey", linetype = 2) +
-  geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.05, linetype = 1) + 
-  geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5, alpha = 0.3) +
-  geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5, alpha = 0.3) + 
-  geom_line(data = HADI_year_avg, aes(x = year, y = mean), colour = "darkgrey", group = 1, size = 0.5, alpha = 0.3) + 
-  geom_smooth(data = HADI_year_avg, method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "darkgrey", group = 1, size = 1, se = FALSE, alpha = 0.3) +
-  # add the Pathfinder dataset on top
-  geom_hline(yintercept = mean(Path_year_avg[-1,]$mean), colour = "black", linetype = 2) +
-  geom_ribbon(data = Path_year_avg[-1,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) +
-  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020)) +
-  ylab('SST (°C)') +
-  geom_line(data = Path_year_avg[-1,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
-  geom_line(data = Path_year_avg[-1,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
-  geom_line(data = Path_year_avg[-1,], aes(x = year, y = mean), colour = "black", group = 1, size = 0.5) + 
-  geom_smooth(data = Path_year_avg[-1,], method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "black", group = 1, size = 1, se = FALSE) +
-  ggtitle("Caribbean coral reefs historic SST trends") +
-  scale_y_continuous(breaks = seq(24, 30, 1)) +
-  coord_cartesian(xlim = c(1870, 2020))
-  ggsave("figures/Supplemental/FigS3_Both_SST_trends.pdf", width = 6, height = 4)
-  ggsave("figures/Supplemental/FigS3_Both_SST_trends.png", width = 6, height = 4)
-
-ggplotly(combo_plot)
-
-```
-
-Comparison of HadISST (1871–2020) and Pathfinder (1981-2019) SST recorded on Caribbean coral reef locations. The high-resolution Pathfinder is represented as darker data over the long-term HadISST. Both datasets are represented by GAM smoothed annual mean SST time (solid line), annual maximum (red line), and annual minimum (blue line) SST. The dashed horizontal line denotes the overall mean SST for all sites over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean through time. 
-
-<br/>
-
-### Figure S4
-
-```{r figure S4 comparing SST on reefs between databases}
+```{r figure S3 comparing SST on reefs between databases}
 
 had_subset <- filter(had_full, year > 1981 & year < 2020)
 path_subset <- filter(path_full, year > 1981 & year < 2020)
@@ -1440,12 +1433,51 @@ ggplot(data = combo_data, aes(x = HadISST, y = Pathfinder)) +
   annotate("text", x = 29.7, y = 25, label = bquote(italic(R)^2 == .(format(had_path_lm_sum$adj.r.squared, digits = 2)))) +
   annotate("text", x = 29.7, y = 24.7, label = "P < 0.001") + 
   ggtitle("Monthly temperature comparison (1982 - 2019)")
-ggsave("figures/Supplemental/Fig4_PathVhadISST.pdf", width = 8, height = 5)
-ggsave("figures/Supplemental/Fig4_PathVhadISST.png", width = 8, height = 5)
+ggsave("figures/Supplemental/Fig3_PathVhadISST.pdf", width = 8, height = 5)
+ggsave("figures/Supplemental/Fig3_PathVhadISST.png", width = 8, height = 5)
 
 ```
 
-Comparison of monthly SST (°C) recorded in the HadISST and Pathfinder databases from 1982-2019. SST values were regressed against one another for the same time for comparison of the relationship between the databases. Points are depicted by month (cooler months in blue and warmer months in red) and the black line represents the resulting linear regression model (R^2^ = `r round(had_path_lm_sum$adj.r.squared, 2)`; P < 0.001).
+**Supplemental Figure 3.** Comparison of monthly SST (°C) recorded in the HadISST and Pathfinder databases from 1982-2019. SST values were regressed against one another for the same time for comparison of the relationship between the databases. Points are depicted by month (cooler months in blue and warmer months in red) and the black line represents the resulting linear regression model (R^2^ = `r round(had_path_lm_sum$adj.r.squared, 2)`; P < 0.001).
+
+<br/>
+
+
+### Figure S4
+
+```{r combined annual SST plot}
+
+## plot with smoothed trend
+combo_plot <- ggplot() +
+  theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1)) +
+  # add the HadISST dataset
+  geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "darkgrey", linetype = 2) +
+  geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.05, linetype = 1) + 
+  geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5, alpha = 0.3) +
+  geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5, alpha = 0.3) + 
+  geom_line(data = HADI_year_avg, aes(x = year, y = mean), colour = "darkgrey", group = 1, size = 0.5, alpha = 0.3) + 
+  geom_smooth(data = HADI_year_avg, method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "darkgrey", group = 1, size = 1, se = FALSE, alpha = 0.3) +
+  # add the Pathfinder dataset on top
+  geom_hline(yintercept = mean(Path_year_avg[-1,]$mean), colour = "black", linetype = 2) +
+  geom_ribbon(data = Path_year_avg[-1,], aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.3, linetype = 1) +
+  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020)) +
+  ylab('SST (°C)') +
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.5) +
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.5) + 
+  geom_line(data = Path_year_avg[-1,], aes(x = year, y = mean), colour = "black", group = 1, size = 0.5) + 
+  geom_smooth(data = Path_year_avg[-1,], method = "gam", aes(x = year, y = mean), formula = y ~ s(x, bs = "cs"), colour = "black", group = 1, size = 1, se = FALSE) +
+  ggtitle("Caribbean coral reefs historic SST trends") +
+  scale_y_continuous(breaks = seq(24, 30, 1)) +
+  coord_cartesian(xlim = c(1870, 2020))
+  ggsave("figures/Supplemental/FigS4_Both_SST_trends.pdf", width = 6, height = 4)
+  ggsave("figures/Supplemental/FigS4_Both_SST_trends.png", width = 6, height = 4)
+
+ggplotly(combo_plot)
+
+```
+
+**Supplemental Figure 4.** Comparison of HadISST (1871-2020) and Pathfinder (1981-2019) SST recorded on Caribbean coral reef locations. The high-resolution Pathfinder is represented as darker data over the long-term HadISST. Both datasets are represented by GAM smoothed annual mean SST time (solid line), annual maximum (red line), and annual minimum (blue line) SST. The dashed horizontal line denotes the overall mean SST for all sites over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean through time. 
 
 <br/>
 
@@ -1454,39 +1486,9 @@ Comparison of monthly SST (°C) recorded in the HadISST and Pathfinder databases
 
 ![](figures/Supplemental/FigS5_Ecoregion_MapSST.png)
 
-Historic SST trends on coral reefs within Caribbean ecoregions (1871–2020) with corresponding reef locations (see Figures 1, 3 in the main text). The colour of each reef location and box around long-term SST (HadISST) plots represent the designated ecoregion. Plots depict SST data with GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the mean SST over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean for the A) Bahamian, B) Eastern Caribbean, C) Floridian, D) Greater Antilles, E) Gulf of Mexico, F) Southern Caribbean, G) Southwestern Caribbean, and H) Western Caribbean ecoregions. 
+**Supplemental Figure 5.** Historic SST trends on coral reefs within Caribbean ecoregions (1871 - 2020) with corresponding reef locations (see **Figures 1, 3** in the main text). The colour of each reef location and box around long-term SST (HadISST) plots represent the designated ecoregion. Plots depict SST data with GAM smoothed annual mean SST time (black line), annual maximum (red line), and annual minimum (blue line) SST. The grey dashed horizontal line denotes the mean SST over the entire period and the grey ribbon represents the 95% confidence interval around the true annual SST mean for the  A) Bahamian, B) Eastern Caribbean, C) Floridian, D) Greater Antilles, E) Gulf of Mexico, F) Southern Caribbean, G) Southwestern Caribbean, and H) Western Caribbean ecoregions. 
 
 <br/>
-
-
-### Figure S10
-
-```{r climate stripes, fig.width = 6, fig.height = 3.3}
-
-had_annual_df <- had_full %>% 
-  group_by(year) %>% 
-  summarise(mean = mean(mean_temp, na.rm = TRUE))
-
-
-stripes <- ggplot(data = had_annual_df, aes(x = year, y = 1, fill = mean, colour = mean)) +
-  theme_pubr() +
-  theme(legend.position = "none", axis.line = element_blank(), axis.ticks = element_blank(), axis.text.y = element_blank(), axis.title = element_blank()) +
-  theme(axis.text.x = element_text(vjust = 5)) +
-  geom_bar(stat = "identity") +
-  scale_fill_gradient2(low = "#2166ac", high = "#b2182b", mid = "#dedede", midpoint = 27.3) +
-  scale_colour_gradient2(low = "#2166ac", high = "#b2182b", mid = "#dedede", midpoint = 27.3) +
-  scale_x_continuous(limits = c(1870, 2020), breaks = seq(1870, 2020, by = 30)) +
-  ggtitle("Caribbean coral reef temperatures 1870-2020")
-
-
-# Saves the manuscript version of the Pathfinder historic SST
-ggplotly(stripes)
-  ggsave("figures/Supplemental/FigS10_ClimateStripes.pdf", width = 6, height = 3.3)
-  ggsave("figures/Supplemental/FigS10_ClimateStripes.png", width = 6, height = 3.3)
-
-```
-
-Climate stripe diagram depicting the mean annual temperature recorded on Caribbean coral reefs from 1870 to 2020 based on the HadISST database. Warmer temperatures are depicted in red (maximum annual SST of `r round(max(had_annual_df$mean), 2)`) and cooler annual temperatures are in blue (minimum annual SST of `r round(min(had_annual_df$mean), 2)`). 
 
 
 ### HadISST GIF
@@ -1519,7 +1521,6 @@ anim_save("HadISST_twitter.gif")
 
 ```
 
-
 Long-term SST records (HadISST) on Caribbean coral reefs depicting mean monthly SST each year (represented by line colour: blue to red).
 
 <br/>
@@ -1528,7 +1529,6 @@ Long-term SST records (HadISST) on Caribbean coral reefs depicting mean monthly 
 ## Caribbean Basin Maps and Marine Heatwaves {.tabset}
 
 ### <span style="color: #0072B2;">**Figure 4**</span>
-
 
 ```{r Pathfinder SST slope map}
 
@@ -1698,7 +1698,7 @@ ggarrange(path_map_markdown, mhw_map_markdown, labels = c("A", "B"))
 
 ```
 
-**Warming patterns throughout the Caribbean Sea.** Increasing warming events across the Caribbean depicted through A) rate of SST change (°C per decade) from 1981 to 2019 (Pathfinder; mean slope `r round(mean(path_slope_clipped$sst), 2)` ± `r round(sd(path_slope_clipped$sst), 3)` °C per decade) and B) increasing marine heatwave events (slope of counts per year). Grey ocean area was not included in these analyses. Map layer was acquired from Natural Earth ([https://www.naturalearthdata.com](https://www.naturalearthdata.com)).
+**Fig 4. Warming patterns throughout the Caribbean Sea.** Increasing warming events across the Caribbean depicted through A) rate of SST change (°C per decade) from 1981 to 2019 (Pathfinder; mean slope `r round(mean(path_slope_clipped$sst), 2)` °C per decade) and B) increasing marine heatwave events (slope of counts per year). Grey ocean area was not included in these analyses. Map layer was acquired from Natural Earth ([https://www.naturalearthdata.com](https://www.naturalearthdata.com)).
 
 ---
 
@@ -1859,8 +1859,6 @@ plot_freq_pixel <- ggplot(data=frequency_df, aes(x= year, y= total_events)) +
   stat_summary(fun.data = mean_sdl, fun.args = list(mult = 1), geom = "errorbar", width = 0) +
   stat_summary(fun = "mean", size = 0.3) +
   geom_line(aes(x = year, y = pred), colour = "steelblue", size = 1) +
-  geom_line(data = frequency_df2, aes(x = year, y = pred), colour = "red", size = 0.5) +
-  geom_line(data = frequency_df3, aes(x = year, y = pred), colour = "green", size = 0.5) +
   annotate(geom = "text", size = 2.8, x = 1985, y = 10, label = freq_rlab, parse=TRUE, colour = "grey20") +
   expand_limits(x = c(1980, 2020)) +  
   labs(x="Year", y="Frequency")
@@ -1948,7 +1946,7 @@ ggarrange(plot_freq_pixel, plot_dur_pixel, plot_rt_pixel, ncol = 3, labels = "AU
 
 ```
 
-**MHW trends (1981–2018) across Caribbean coral reefs.** Temperature data are based on OISST gridded data to determine A) marine heat wave (MHW) frequency (number events per year) with Nagelkerke pseudo R^2^; B) MHW duration (number days per event) with linear model R^2^ ; and C) return time (number days per event) since the previous MHW event with linear model R^2^ reported. Points denote annual mean values (±SD) and blue lines represent linear (lm or glm) trends. 
+**Fig 5. MHW trends (1981–2018) across Caribbean coral reefs.** Temperature data are based on OISST gridded data to determine A) marine heat wave (MHW) frequency (number events per year) with Nagelkerke pseudo R^2^; B) MHW duration (number days per event) with linear model R^2^ ; and C) return time (number days per event) since the previous MHW event with linear model R^2^ reported. Points denote annual mean values (±SD) and blue lines represent linear (lm or glm) trends. 
 
 ---
 
@@ -1969,7 +1967,7 @@ ggarrange(path_pval_markdown, mhw_pval_markdown, align = "hv", labels = c("A", "
 
 ```
 
-Significance of **A**) rate of SST change (°C per decade) and **B**) number of marine heatwave events per year across the Caribbean depicted in **Figure 4**. Grey ocean area was not included in these analyses.
+**Supplemental Figure 6.** Significance of A) rate of SST change (°C per decade) and B) number of marine heatwave events per year across the Caribbean depicted in **Figure 4**. Grey ocean area was not included in these analyses.
 
 ---
 
@@ -2040,7 +2038,7 @@ ggarrange(had_map, had_pval_map, labels = c("A", "B"))
 
 ```
 
-**A**) Rate of SST change (°C per decade) over the duration of the HadISST database across the Caribbean from 1871 to 2020 (mean slope `r round(mean(had_slope_clipped$sst), 2)` ± `r round(sd(had_slope_clipped$sst), 3)` °C per decade) and **B**) significance of rate of SST change. Grey ocean area was not included in these analyses.
+**Supplemental Figure 7. A**) Rate of SST change (°C per decade) over the duration of the HadISST database across the Caribbean from 1871 to 2020 (mean slope `r round(mean(had_slope_clipped$sst), 2)` ± `r round(sd(had_slope_clipped$sst), 3)` °C per decade) and **B**) significance of rate of SST change. Grey ocean area was not included in these analyses.
 
 ---
 
@@ -2107,7 +2105,7 @@ ggarrange(had_map_sub, had_pval_map_sub, labels = c("A", "B"))
 
 ```
 
-**A**) Rate of SST change (°C per decade) across the Caribbean from 1981 to 2020 (HadISST; mean slope `r round(mean(had_slope_sub_clipped$sst), 2)` ± `r round(sd(had_slope_sub_clipped$sst), 3)` °C per decade) and **B**) significance of rate of SST change. Grey ocean area was not included in these analyses.
+**Supplemental Figure 8. A**) Rate of SST change (°C per decade) across the Caribbean from 1981 to 2020 (HadISST; mean slope `r round(mean(had_slope_sub_clipped$sst), 2)` ± `r round(sd(had_slope_sub_clipped$sst), 3)` °C per decade) and **B**) significance of rate of SST change. Grey ocean area was not included in these analyses.
 
 ---
 
@@ -2115,7 +2113,6 @@ ggarrange(had_map_sub, had_pval_map_sub, labels = c("A", "B"))
 
 
 ### Figure S9
-
 
 ```{r MHW frequency by ecoregion}
 
@@ -2242,7 +2239,7 @@ ggarrange(plot_freq_region, plot_dur_region, plot_rt_region, plot_int_region, pl
 
 ```
 
-MHW trends (1981–2018) across Caribbean coral reefs by ecoregion. Temperature data are based on OISST gridded data to determine frequency (number events per year), duration (number days per event), return time (number days per event) since the previous event, onset rate (°C per day) from start until peak intensity, peak intensity (°C), and total days reefs experience MHWs per year. Points denote annual mean values (±SD) and blue lines represent linear (lm or glm) trends within each ecoregion (see Figures 1, S5 for ecoregion locations). Frequency, duration, and return time across all Caribbean coral reefs are depicted in Figure 5 in the main text. 
+**Supplemental Figure 9.** MHW trends (1981 - 2018) across Caribbean coral reefs by ecoregion. Temperature data are based on OISST gridded data to determine frequency (number events per year), duration (number days per event), return time (number days per event) since the previous event, onset rate (°C per day) from start until peak intensity, peak intensity (°C), and total days reefs experience MHWs per year. Points denote annual mean values (±SD) and blue lines represent linear (lm or glm) trends within each ecoregion (see **Figures 1, Supplemental Figure 5** for ecoregion locations). Frequency, duration, and return time across all Caribbean coral reefs are depicted in **Figure 5** in the main text. 
 
 ---
 
@@ -2253,7 +2250,7 @@ MHW trends (1981–2018) across Caribbean coral reefs by ecoregion. Temperature 
 
 ### <span style="color: #0072B2;">**Table 1**</span>
 
-**Table 1.** Estimated warming rates from both HadISST and Pathfinder databases for different temporal ranges. Values are means of all 5,326 reef locations included in the study. The year 1994 was estimated as the beginning of the most recent period of warming across all Caribbean coral reefs (**see Figure S2**). 
+**Table 1.** Estimated warming rates from both HadISST and Pathfinder databases for different temporal ranges. Coral reef values are means of all 5,326 reef locations included in the study. The year 1994 was estimated as the beginning of the most recent period of warming across all Caribbean coral reefs (**see S1 Fig**). The HadISST data can be accessed at [www.metoffice.gov.uk/hadobs/hadisst/](www.metoffice.gov.uk/hadobs/hadisst/), the Pathfinder can be accessed at [www.ncei.noaa.gov/products/avhrr-pathfinder-sst](www.ncei.noaa.gov/products/avhrr-pathfinder-sst), and the OISST can be accessed at [www.ncei.noaa.gov/products/optimum-interpolation-sst](www.ncei.noaa.gov/products/optimum-interpolation-sst).
 
 ```{r HadISST warming rates for table}
 #### Basin values
@@ -2367,17 +2364,18 @@ path_reef_sub_value <- round(((path_reef_sub_rate/10) * (2019-(1994-1))), 2) # m
 
 ## Compile dataframe from above calculated values/rates
 
-table_1 <- data.frame("Temperature parameter" = c("Caribbean Basin (°C per decade)", "Caribbean Basin (total °C for period)", "Caribbean Reefs (°C per decade)", "Caribbean Reefs (total °C for period)"),
-                      "HadISST (1871-2020)" = c(had_basin_full_rate, had_basin_full_value, had_reef_full_rate, had_reef_full_value),
-                      "HadISST (1981-2020)" = c(had_basin_sub_81_rate, had_basin_sub_81_value, had_reef_sub_81_rate, had_reef_sub_81_value),
-                      "HadISST (1994-2020)" = c(had_basin_sub_94_rate, had_basin_sub_94_value, had_reef_sub_94_rate, had_reef_sub_94_value), 
-                      "Pathfinder (1981-2019)" = c(path_basin_full_rate, path_basin_full_value, path_reef_full_rate, path_reef_full_value),
-                      "Pathfinder (1990-2019)" = c("NA", "NA", path_reef_sub_rate, path_reef_sub_value)
+table_1 <- data.frame("Temperature parameter" = c("Caribbean Basin (°C per decade)", "Caribbean Basin (total °C for period)", "Caribbean Reefs (°C per decade)", "Caribbean Reefs (total °C for period)", "Caribbean Basin (increasing frequency of MHW per year) "),
+                      "HadISST (1871-2020)" = c(had_basin_full_rate, had_basin_full_value, had_reef_full_rate, had_reef_full_value, "NA"),
+                      "HadISST (1981-2020)" = c(had_basin_sub_81_rate, had_basin_sub_81_value, had_reef_sub_81_rate, had_reef_sub_81_value, "NA"),
+                      "HadISST (1994-2020)" = c(had_basin_sub_94_rate, had_basin_sub_94_value, had_reef_sub_94_rate, had_reef_sub_94_value, "NA"), 
+                      "Pathfinder (1981-2019)" = c(path_basin_full_rate, path_basin_full_value, path_reef_full_rate, path_reef_full_value, "NA"),
+                      "Pathfinder (1990-2019)" = c("NA", "NA", path_reef_sub_rate, path_reef_sub_value, "NA"),
+                      "OISST" = c("NA", "NA", "NA", "NA", "0.05")
 )
 
 
 # View the completed 
-kable(table_1, booktabs = TRUE, row.names = FALSE, col.names = c("Temperature parameter", "HadISST (1871-2020)", "HadISST (1981-2020)", "HadISST (1994-2020)", "Pathfinder (1981-2019)", "Pathfinder (1994-2019)")) %>% 
+kable(table_1, booktabs = TRUE, row.names = FALSE, col.names = c("Temperature parameter", "HadISST (1871-2020)", "HadISST (1981-2020)", "HadISST (1994-2020)", "Pathfinder (1981-2019)", "Pathfinder (1994-2019)", "OISST (1982-2019")) %>% 
   kable_styling(font_size = 11, full_width = FALSE)
 
 ```
@@ -2388,11 +2386,11 @@ kable(table_1, booktabs = TRUE, row.names = FALSE, col.names = c("Temperature pa
 
 | Study | °C per decade | Years |
 |:----|:----|:----|
-| Casey and Cornillon 2001 ^55^ | 0.14 | 1960–1990 |
-| Lawrence et al. 2004 ^56^ | 0.09–0.13 | 1985–2000 |
-| Good et al. 2007 ^57^ | 0.17  | 1985–2004 |
-| Burrows et al. 2011 ^58^ | 0.07 | 1960–2009 |
-| USGCRP 2017 ^59^ | 0.15 | 1900–2016 |
+| Casey and Cornillon 2001 ^41^ | 0.14 | 1960–1990 |
+| Lawrence et al. 2004 ^87^ | 0.09–0.13 | 1985–2000 |
+| Good et al. 2007 ^88^ | 0.17  | 1985–2004 |
+| Burrows et al. 2011 ^89^ | 0.07 | 1960–2009 |
+| USGCRP 2017 ^90^ | 0.15 | 1900–2016 |
 
 
 ### Table S1
@@ -2409,7 +2407,28 @@ kable(table_1, booktabs = TRUE, row.names = FALSE, col.names = c("Temperature pa
 
 
 ### Table S2
-**Table S2.** Mean ocean warming rate (°C per decade; with 95% confidence interval) and total increase in temperature (°C) on coral reefs within each Caribbean ecoregion since the noted year of inflection point. The inflection point for each ecoregion was identified as the year in which annual warming rates noticeably increased based on the GAM smoothed annual means (**see Figures 3 and S6**). Years indicated with an asterisk (*) represent inflection points identified for ecoregions that occurred before the Pathfinder dataset record, therefore those rates and total warming values were calculated from the beginning of the record in 1981.  
+
+**Supplemental Table 2.** Description of the SST or MHW metrics assessed in this manuscript with details on the source of the temperature data (database), the scale of the measure, any data transformations completed for statistical analyses (transformation), the statistical test performed, and the R package used for each test. Further details on these methods can be found on the corresponding GitHub repository [github.com/seabove7/CaribbeanSST](github.com/seabove7/CaribbeanSST) and on Zenodo (DOI: [10.5281/zenodo.4751658](10.5281/zenodo.4751658)).
+
+| Metric | Database | Scale | Transformation | Statistical test	| Package (version) |
+|:----|:----|:----|:----|:-------------|:----|
+| Rate of SST change | HadISST |	basin |	NA |	GLS; correlation structure of time for autocorrelation |	nlme (3.1.151)^2^ |
+| Rate of SST change |	HadISST |	reefs |	NA |	GAMM; cubic spline for year and cyclic cubic regression spline for month and correlation structure of time for autocorrelation |	mgcv (1.8.36)^3^ |
+| Rate of SST change |	Pathfinder |	basin |	NA |	GLS; correlation structure of time for autocorrelation |	nlme (3.1.151)^2^ |
+| MHW frequency |	OISST |	reefs |	NA |	GLM; poisson with log link |	stats (3.6.3)^4^ |
+| MHW duration |	OISST |	reefs |	log |	OLS model |	stats (3.6.3)^4^ |
+| MHW return time |	OISST |	reefs |	log |	OLS model |	stats (3.6.3)^4^ |
+| MHW total # events |	OISST |	reefs by ecoregion |	NA	OLS model |	lme4 (1.1.27.1)^5^ |
+| MHW duration |	OISST |	reefs by ecoregion |	log |	OLS model |	lme4 (1.1.27.1)^5^ |
+| MHW return time |	OISST |	reefs by ecoregion |	log |	OLS model |	lme4 (1.1.27.1)^5^ |
+| MHW max intensity |	OISST |	reefs by ecoregion |	log |	OLS model |	lme4 (1.1.27.1)^5^ |
+| MHW onset |	OISST |	reefs by ecoregion |	log |	OLS model |	lme4 (1.1.27.1)^5^ |
+| MHW frequency |	OISST |	reefs by ecoregion |	NA |	GLM; poisson with log link |	lme4 (1.1.27.1)^5^ |
+
+
+### Table S3
+
+**Supplemental Table 3.** Mean ocean warming rate (°C per decade; with 95% confidence interval) and total increase in temperature (°C) on coral reefs within each Caribbean ecoregion since the noted year of inflection point. The inflection point for each ecoregion was identified as the year in which annual warming rates significantly increased based on the first derivative of the GAM curve for each ecoregion (**see Figures 3 and S6**).
 
 ```{r Pathfinder ecoregion SST dataframe construction}
 
@@ -2486,7 +2505,7 @@ ecoregion_slope$total_warm <- round(((ecoregion_slope$slope / 10) * (2019 - ecor
 
 ```
 
-```{r table S2 visualization}
+```{r table S3 visualization}
 
 ## Compile dataframe from ecoregion rates
 kable(ecoregion_slope, booktabs = TRUE, row.names = FALSE, col.names = c("Ecoregion", "Inflection point", "Mean rate (°C per decade)", "Lower confidence interval", "Upper confidence interval", "Warming extent (°C)")) %>% 
@@ -2494,11 +2513,11 @@ kable(ecoregion_slope, booktabs = TRUE, row.names = FALSE, col.names = c("Ecoreg
 
 ```
 
-### Table S3
+### Table S4
 
-**Table S3.** Model results for MHW trends on coral reefs in the Caribbean basin between 1981-2018. Frequency was modeled using a glm model with poisson distribution and log link. Estimates, standard error, z scores (statistic), and p-values are reported. Nagelkerke pseudo r-squared used to assess goodness of fit. MHW duration and return time were log transformed before modeling with ols models. Estimate, standard error, t value (statistic) and p-value are reported along with multiple and adjusted r-squared.
+**Table S4.** Model results for MHW trends on coral reefs in the Caribbean basin between 1981-2018. Frequency was modeled using a glm model with poisson distribution and log link. Estimates, standard error, z scores (statistic), and p-values are reported. Nagelkerke pseudo r-squared used to assess goodness of fit. MHW duration and return time were log transformed before modeling with ols models. Estimate, standard error, t value (statistic) and p-value are reported along with multiple and adjusted r-squared.
 
-```{r table S3 saving}
+```{r table S4 saving}
 
 ## Make summary table of main text MHW models:
 # make a list containing R2 value per model
@@ -2522,19 +2541,19 @@ mhw_mod_out <- mhw_mod_out %>%
   
 
 # combine them with format
-table_s3 <- kable(mhw_mod_out, booktabs = T) %>%
+table_s4 <- kable(mhw_mod_out, booktabs = T) %>%
   kable_styling(font_size = 12, full_width = F) %>% 
   pack_rows("Frequency", 1, 3) %>%
   pack_rows("Duration", 4, 6) %>%
   pack_rows("Return Time", 7, 9)
-table_s3
+table_s4
 
 ```
 
 
 ### Table S4
 
-**Table S4.** Mean decadal value of MHW parameters (frequency, duration, and return time) for the entire basin and by ecoregion.
+**Table S5.** Mean decadal value of MHW parameters (frequency, duration, and return time) for the entire basin and by ecoregion.
 
 ```{r MHW decade values}
 
@@ -2585,7 +2604,7 @@ rt_decade_eco_summary <- mhw_pixel %>%
 
 ```
 
-```{r table S4 - MHW decade summaries}
+```{r table S5 - MHW decade summaries}
 
 # Frequency data per region (and across entire Caribbean)
 freq_decade_full <- freq_decade_summary %>% 
@@ -2621,13 +2640,13 @@ mhw_decade_full <- freq_decade_full %>%
 
 
 ## Create table with format for markdown and to save
-table_s4 <- kable(mhw_decade_full[-1], booktabs = T) %>%
+table_s5 <- kable(mhw_decade_full[-1], booktabs = T) %>%
   kable_styling(font_size = 12, full_width = F) %>% 
   row_spec(c(1, 10, 19), bold = TRUE) %>% 
   pack_rows("Duration (days)", 1, 9) %>% 
   pack_rows("Frequency (events per year)", 10, 18) %>%  
   pack_rows("Return Time (days)", 19, 27)  
-table_s4
+table_s5
 
 ```
 
