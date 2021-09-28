@@ -655,7 +655,7 @@ had_year_plot <- ggplot() +
   geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.35) + # min sst
   geom_line(data = had_predict_df, aes(x = year, y = response)) + # the predicted GAM curve (modelled above)
   coord_cartesian(xlim = c(1870, 2020))
-  ggsave("figures/Supplemental/Bove_SST_abstract_image.png", width = 6, height = 3.75)
+  #ggsave("figures/Supplemental/Bove_SST_abstract_image.png", width = 6, height = 3.75)
 
 ```
 
@@ -1433,8 +1433,8 @@ ggplot(data = combo_data, aes(x = HadISST, y = Pathfinder)) +
   annotate("text", x = 29.7, y = 25, label = bquote(italic(R)^2 == .(format(had_path_lm_sum$adj.r.squared, digits = 2)))) +
   annotate("text", x = 29.7, y = 24.7, label = "P < 0.001") + 
   ggtitle("Monthly temperature comparison (1982 - 2019)")
-ggsave("figures/Supplemental/Fig3_PathVhadISST.pdf", width = 8, height = 5)
-ggsave("figures/Supplemental/Fig3_PathVhadISST.png", width = 8, height = 5)
+ggsave("figures/Supplemental/FigS3_PathVhadISST.pdf", width = 8, height = 5)
+ggsave("figures/Supplemental/FigS3_PathVhadISST.png", width = 8, height = 5)
 
 ```
 
@@ -1502,7 +1502,7 @@ had_plot_gif <- ggplot() +
   guides(colour = guide_colorbar(frame.colour = "black", ticks.colour = "black")) +
   geom_line(data = had_full, aes(x = month, y = mean_temp, group = year, colour = year), size = 1) +
   scale_colour_gradient2("Year", low = "#2166ac", mid = "#d1e5f0", high = "#d6604d", midpoint = mean(had_full$year), space="Lab") +
-  #annotate(geom = "text", size = 4, x = 11, y = 24.6, label = "@DrSeaBove7", colour = "grey20") +
+  #annotate(geom = "text", size = 4, x = 11, y = 24.6, label = "@DrSeaBove", colour = "grey20") +
   coord_cartesian(ylim = c(24.5, 30), clip = "off") +
   scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
   ylab('SST (°C)')
