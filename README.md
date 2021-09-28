@@ -1,7 +1,9 @@
 # *A century of warming on Caribbean reefs*
 
-<img src="https://user-images.githubusercontent.com/45176386/113480898-bfc60c00-9464-11eb-9a95-00af8f80c9ea.png" width = "700" />
-
+<p align="center">
+<img src="https://github.com/seabove7/CaribbeanSST/blob/master/figures/Manuscript/Fig6_ClimateStripes.png" width = "700" />
+</p> 
+ 
 GitHub repository containing data and code accompanying the Caribbean warming and MHW manuscript (Bove et al XXX; DOI: XXX)
 
 **Repository DOI:** [![DOI](https://zenodo.org/badge/283885820.svg)](https://zenodo.org/badge/latestdoi/283885820)
