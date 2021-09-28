@@ -138,8 +138,8 @@ HadISST_sst_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_dat
 pathfinder_combined_monthly_data_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/pathfinder_combined_monthly_data.nc"
 
 ## Pathfinder_monthly_edit.nc: 
-# Dropbox link: https://www.dropbox.com/s/klorzek794epfpn/PathfinderSST_monthly_edit.nc?dl=0
-Pathfinder_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/Pathfinder_monthly_edit_06Sep2021.nc"
+# Dropbox link: https://www.dropbox.com/s/xcem349nbx8x1mg/PathfinderSST_monthly_edit.nc?dl=0
+Pathfinder_monthly_edit_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/Pathfinder_monthly_edit.nc"
 
 ## OISST_MHW_carib.Rda: 
 # Dropbox link: https://www.dropbox.com/s/ztqfu2sh0da54j3/OISST_MHW_carib.Rda?dl=0
