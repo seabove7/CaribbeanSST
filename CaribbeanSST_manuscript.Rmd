@@ -640,22 +640,102 @@ HADI_year_avg <- had_full %>%
          upperci = mean + qt(1 - (0.05 / 2), n - 1) * se,
          range = max - min)
 
+```
 
-## plot with smoothed trend
+```{r calculate HadISST GAM slope significance}
+
+## Source the required functions written by Gavin Simpson for calculating significant slopes based on first derivative of GAM
+# This code is modified from his tutorials here: https://fromthebottomoftheheap.net/2014/05/15/identifying-periods-of-change-with-gams/
+source('code/GSimpsonFunctions.R') 
+
+## Derivative calculation (using the HadISST GAM modelled above (had_gam))
+m_terms <- attr(terms(had_gam$gam), "term.labels") # pull out the model term labels (here, "year" and "month")
+newD <- data.frame(model.frame(had_gam$gam)[, m_terms, drop = FALSE]) # creates new dataframe of the terms identified above
+X0 <- predict(had_gam$gam, newD, type = "lpmatrix") # predict returning matrix of linear predictors from model derivatives
+eps <- 1e-7 # set finite difference interval
+newD$year <- newD$year + eps ## shift the evaluation mesh
+X1 <- predict(had_gam$gam, newD, type = "lpmatrix")
+Xp <- (X1 - X0) / eps
+t_labs <- attr(had_gam$gam$terms, "term.labels") # number of smooth terms
+nt <- length(t_labs)
+
+## forloop to run through smooth terms and calculate derivative and SE
+lD <- vector(mode = "list", length = nt) # create empty list to hold the derivatives
+names(lD) <- t_labs # rename with the smoothing terms
+for(i in seq_len(nt)) {
+  i = 1
+  Xi <- Xp * 0
+  want <- grep(t_labs[i], colnames(X1))
+  Xi[, want] <- Xp[, want]
+  df <- Xi %*% coef(had_gam$gam)
+  df.sd <- rowSums(Xi %*% had_gam$gam$Vp * Xi)^.5
+  lD[[i]] <- list(deriv = df, se.deriv = df.sd)
+}
+
+## Modify the lD object created above
+class(lD) <- "Deriv" # change the class to 'Deriv'
+lD$gamModel <- had_gam$gam # add GAM
+lD$eps <- eps # add eps (defined above)
+newD$year <- newD$year - eps # modify year by eps
+lD$eval <- newD # add modified year
+
+# confint and signifD are sourced from GSimpson_functions.R
+# signifD is commented out and regions of significance are calculated manually to allow plotting +/- intervals in different colors 
+CI <- confint(lD, term = 'year', alpha = 0.05) # calculate upper and lower 95% CI (alpha = 0.05) of term "year"
+sig <- data.frame(up = CI$year$upper, low = CI$year$lower, seq = seq(1:length(CI$year$upper))) # create a dataframe of the upper/lower CI
+incr <- sig[sig$low > 0,] # dataframe with all rows with CI greater than 0 (significant increase)
+decr <- sig[sig$up < 0,] # dataframe with all rows with CI lower than 0 (significant decline)
+had_predict_df$incr <- had_predict_df$decr <- NA # adds columns with NAs for 'incr' and 'decr' to the predicted dataframe
+had_predict_df$incr[incr$seq] <- 1 # replaces NA with 1 in 'incr' column when CI is significantly increasing
+had_predict_df$decr[decr$seq] <- 1 # replaces NA with 1 in 'decr' column when CI is significantly decreasing
+
+
+## Create a dataframe of significant increasing or decreasing slope values to overlay GAM curve
+had_gam_slope <- data.frame("year" = integer(),
+                            "value" = numeric(),
+                            "type" = character())
+
+for(i in c("incr")) {
+  change_yrs <- data.frame(year = had_predict_df$year[which(had_predict_df[i] == 1)],
+                       y = as.numeric(had_predict_df$response[which(had_predict_df[i] == 1)]))
+  change_yrs2 <- change_yrs[!duplicated(change_yrs$year),]
+  change_slope <- expand.grid(min(change_yrs2$year):max(change_yrs2$year))
+  change_slope$val <- apply(change_slope, 1, function(x) if (nrow(subset(change_yrs2, year == x[1]))) subset(change_yrs2, year == x[1])$y else NA)
+  change_slope$type <- rep(i, nrow(change_slope))
+  names(change_slope) <- c("year", "value", "type")
+  had_gam_slope <- rbind(had_gam_slope, change_slope)
+}
+
+```
+
+```{r plot the HadISST GAM with sig slopes}
+
 had_year_plot <- ggplot() +
   theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14)) +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14), legend.position = "none") +
   geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "grey", linetype = 2) +
+  geom_vline(xintercept = 1988, colour = "grey", linetype = 1) + #Bahamian
+  geom_vline(xintercept = 1984, colour = "grey", linetype = 1) + #E Caribbean
+  geom_vline(xintercept = 1993, colour = "grey", linetype = 1) + #Floridian
+  geom_vline(xintercept = 1986, colour = "grey", linetype = 1) + #G Antilles
+  geom_vline(xintercept = 1981, colour = "grey", linetype = 1) + #GOM
+  geom_vline(xintercept = 1981, colour = "grey", linetype = 1) + #S Caribbean
+  geom_vline(xintercept = 1982, colour = "grey", linetype = 1) + #SW Caribbean
+  geom_vline(xintercept = 1999, colour = "grey", linetype = 1) + #W Caribbean
   geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.1, linetype = 1, size = 0.2) + 
-  #geom_line(data = HADI_year_avg, aes(x = year, y = mean), colour = "black", group = 1, size = 1, alpha = 0.7) + # mean sst
   scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020)) +
   ylab('SST (°C)') +
-  scale_y_continuous(breaks = seq(24, 30, 1)) +
+  scale_y_continuous(breaks = seq(23, 31, 1)) +
   geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.35) + # max sst
   geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.35) + # min sst
-  geom_line(data = had_predict_df, aes(x = year, y = response)) + # the predicted GAM curve (modelled above)
-  coord_cartesian(xlim = c(1870, 2020))
-  #ggsave("figures/Supplemental/Bove_SST_abstract_image.png", width = 6, height = 3.75)
+  geom_rect(aes(ymin = -Inf, ymax = Inf, xmin = 1994, xmax = Inf), colour = 'black', fill = "#fee090", alpha = 0.2) +
+  geom_rect(aes(ymin = -Inf, ymax = Inf, xmin = 1915, xmax = 1945), colour = 'black', fill = "#fee090", alpha = 0.2) +  
+  #geom_text(aes(x = 1999, y = 24.9, label = "1994"), size = 3) +
+  #geom_text(aes(x = 1920, y = 24.9, label = "1915"), size = 3) +
+  geom_line(data = had_predict_df, aes(x=year, y=response), lwd = 0.75) +
+  geom_line(data = had_gam_slope, aes(x = year, y = value, colour = type), lwd = 0.75) +
+  scale_colour_manual(values = c( "#d73027")) +
+  coord_cartesian(xlim = c(1870, 2020), expand = FALSE)
 
 ```
 
@@ -866,99 +946,6 @@ ggplotly(stripes)
 <br/>
 
 ### Figure S1
-
-```{r calculate HadISST GAM slope significance}
-
-## Source the required functions written by Gavin Simpson for calculating significant slopes based on first derivative of GAM
-# This code is modified from his tutorials here: https://fromthebottomoftheheap.net/2014/05/15/identifying-periods-of-change-with-gams/
-source('code/GSimpsonFunctions.R') 
-
-## Derivative calculation (using the HadISST GAM modelled above (had_gam))
-m_terms <- attr(terms(had_gam$gam), "term.labels") # pull out the model term labels (here, "year" and "month")
-newD <- data.frame(model.frame(had_gam$gam)[, m_terms, drop = FALSE]) # creates new dataframe of the terms identified above
-X0 <- predict(had_gam$gam, newD, type = "lpmatrix") # predict returning matrix of linear predictors from model derivatives
-eps <- 1e-7 # set finite difference interval
-newD$year <- newD$year + eps ## shift the evaluation mesh
-X1 <- predict(had_gam$gam, newD, type = "lpmatrix")
-Xp <- (X1 - X0) / eps
-t_labs <- attr(had_gam$gam$terms, "term.labels") # number of smooth terms
-nt <- length(t_labs)
-
-## forloop to run through smooth terms and calculate derivative and SE
-lD <- vector(mode = "list", length = nt) # create empty list to hold the derivatives
-names(lD) <- t_labs # rename with the smoothing terms
-for(i in seq_len(nt)) {
-  i = 1
-  Xi <- Xp * 0
-  want <- grep(t_labs[i], colnames(X1))
-  Xi[, want] <- Xp[, want]
-  df <- Xi %*% coef(had_gam$gam)
-  df.sd <- rowSums(Xi %*% had_gam$gam$Vp * Xi)^.5
-  lD[[i]] <- list(deriv = df, se.deriv = df.sd)
-}
-
-## Modify the lD object created above
-class(lD) <- "Deriv" # change the class to 'Deriv'
-lD$gamModel <- had_gam$gam # add GAM
-lD$eps <- eps # add eps (defined above)
-newD$year <- newD$year - eps # modify year by eps
-lD$eval <- newD # add modified year
-
-# confint and signifD are sourced from GSimpson_functions.R
-# signifD is commented out and regions of significance are calculated manually to allow plotting +/- intervals in different colors 
-CI <- confint(lD, term = 'year', alpha = 0.05) # calculate upper and lower 95% CI (alpha = 0.05) of term "year"
-sig <- data.frame(up = CI$year$upper, low = CI$year$lower, seq = seq(1:length(CI$year$upper))) # create a dataframe of the upper/lower CI
-incr <- sig[sig$low > 0,] # dataframe with all rows with CI greater than 0 (significant increase)
-decr <- sig[sig$up < 0,] # dataframe with all rows with CI lower than 0 (significant decline)
-had_predict_df$incr <- had_predict_df$decr <- NA # adds columns with NAs for 'incr' and 'decr' to the predicted dataframe
-had_predict_df$incr[incr$seq] <- 1 # replaces NA with 1 in 'incr' column when CI is significantly increasing
-had_predict_df$decr[decr$seq] <- 1 # replaces NA with 1 in 'decr' column when CI is significantly decreasing
-
-
-## Create a dataframe of significant increasing or decreasing slope values to overlay GAM curve
-had_gam_slope <- data.frame("year" = integer(),
-                            "value" = numeric(),
-                            "type" = character())
-
-for(i in c("incr")) {
-  change_yrs <- data.frame(year = had_predict_df$year[which(had_predict_df[i] == 1)],
-                       y = as.numeric(had_predict_df$response[which(had_predict_df[i] == 1)]))
-  change_yrs2 <- change_yrs[!duplicated(change_yrs$year),]
-  change_slope <- expand.grid(min(change_yrs2$year):max(change_yrs2$year))
-  change_slope$val <- apply(change_slope, 1, function(x) if (nrow(subset(change_yrs2, year == x[1]))) subset(change_yrs2, year == x[1])$y else NA)
-  change_slope$type <- rep(i, nrow(change_slope))
-  names(change_slope) <- c("year", "value", "type")
-  had_gam_slope <- rbind(had_gam_slope, change_slope)
-}
-
-```
-
-```{r plot the HadISST GAM with sig slopes}
-
-ggplot() +
-  theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14), legend.position = "none") +
-  geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "grey", linetype = 2) +
-  geom_ribbon(data = HADI_year_avg, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.1, linetype = 1, size = 0.2) + 
-  scale_x_continuous(name = "Year", breaks = c(1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020)) +
-  ylab('SST (°C)') +
-  scale_y_continuous(breaks = seq(24, 30, 1)) +
-  geom_line(data = HADI_year_avg, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.35) + # max sst
-  geom_line(data = HADI_year_avg, aes(x = year, y = min), colour = "#2166ac", group = 1, size = 0.35) + # min sst
-  geom_rect(aes(ymin = -Inf, ymax = Inf, xmin = 1994, xmax = Inf), colour = 'black', fill = "#fee090", alpha = 0.2) +
-  geom_rect(aes(ymin = -Inf, ymax = Inf, xmin = 1915, xmax = 1945), colour = 'black', fill = "#fee090", alpha = 0.2) +  
-  geom_text(aes(x = 1999, y = 23.9, label = "1994"), size = 3) +
-  geom_text(aes(x = 1920, y = 23.9, label = "1915"), size = 3) +
-  geom_line(data = had_predict_df, aes(x=year, y=response), lwd = 0.75) +
-  geom_line(data = had_gam_slope, aes(x = year, y = value, colour = type), lwd = 0.75) +
-  scale_colour_manual(values = c( "#d73027")) +
-  coord_cartesian(xlim = c(1870, 2020))
-  ggsave("figures/Supplemental/FigS1_HadISST_GAM_slopes.pdf", width = 6, height = 3.75) 
-  ggsave("figures/Supplemental/FigS1_HadISST_GAM_slopes.png", width = 6, height = 3.75)
-
-```
-
-**Supplemental Figure 1.** Historic SST trend on Caribbean coral reefs (1871–2020). Long-term SST records (HadISST) on Caribbean coral reefs depicting significant changes in warming rate based on the first derivative of the GAM slope. The GAM smoothed annual mean SST time is represented by the black line with significantly warming (red) identified over the curve. The most recent significant warming event began in 1987 and is highlighted in the yellow box. The annual maximum (red line) and annual minimum (blue line) SST are also depicted, along with the overall mean SST for all sites over the entire period (27.3 °C; grey dashed line). The grey ribbon represents the 95% confidence interval around the true annual SST mean through time.
 
 
 ```{r ecoregion GAM slope significance}
