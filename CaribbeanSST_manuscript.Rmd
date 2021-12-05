@@ -977,16 +977,18 @@ for(e in levels(eco_gam_month$ecoregion)) {
 
 ```{r plot ecoregion GAM slope significance, fig.height = 8, fig.width = 7}
 
-eco_gam_slope %>% group_by(ecoregion) %>% filter(year > 1975 & !is.na(value)) %>% filter(value == min(value))
+# make colour column for the different warming periods
+eco_gam_slope$col <- factor(ifelse(is.na(eco_gam_slope$value), 'NA', "#fee090"))
 
-
-filter()## Plots each individual GAM per ecoregion with highlighted regions of significant warming as calculated above. This plot is not in the manuscipt at present.
+## Plots each individual GAM per ecoregion with highlighted regions of significant warming as calculated above. This plot is not in the manuscipt at present.
 ggplot() +
   theme_bw() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), axis.text.x = element_text(angle = 30, hjust = 0.8), text = element_text(size = 14)) +
-  geom_rect(data = eco_gam_slope %>% group_by(ecoregion) %>% filter(year > 1975 & !is.na(value)) %>% filter(value == min(value)), aes(ymin = -Inf, ymax = Inf, xmin = year, xmax = Inf), colour = 'black', fill = "#fee090", alpha = 0.2) + 
-  geom_segment(data = ecoregion_year_mean, aes(y = mean, yend = mean, x = 1870, xend = 2020), colour = "darkgrey", linetype = 2) +
-  geom_ribbon(data = ecoregion_sst_annual, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.1, linetype = 1, size = 0.2) + 
+  #geom_rect(data = eco_gam_slope %>% group_by(ecoregion) %>% filter(year > 1975 & !is.na(value)) %>% filter(value == min(value)), aes(ymin = -Inf, ymax = Inf, xmin = year, xmax = Inf), colour = 'black', fill = "#fee090", alpha = 0.2) + 
+  geom_rect(data = eco_gam_slope, aes(xmin = year, xmax = year+1, ymin = -Inf, ymax = Inf, fill = col), alpha = 0.4, show.legend = FALSE) +
+  scale_fill_manual(values = c("#fee090", "transparent")) +
+  #geom_segment(data = ecoregion_year_mean, aes(y = mean, yend = mean, x = 1870, xend = 2020), colour = "darkgrey", linetype = 2) +
+ # geom_ribbon(data = ecoregion_sst_annual, aes(x = year, ymin = lowerci, ymax = upperci), colour = "darkgrey", alpha = 0.1, linetype = 1, size = 0.2) + 
   scale_x_continuous(name = "", breaks = seq(1880, 2020, 20)) +
   ylab('SST (°C)') +
   geom_line(data = ecoregion_sst_annual, aes(x = year, y = max), colour = "#d6604d", group = 1, size = 0.35) +
