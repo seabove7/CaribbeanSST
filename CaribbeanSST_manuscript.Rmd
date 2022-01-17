@@ -1492,8 +1492,13 @@ had_gif <- had_plot_gif +
   shadow_mark(alpha = 0.1, size = 0.5)
 
 animate(had_gif, fps = 10, nframes = 300, end_pause = 2, width = 650, height = 400, renderer = gifski_renderer())
-#anim_save("figures/Supplemental/HadISST.gif")
 anim_save("HadISST_twitter.gif")
+
+
+## saving a version for presentations
+# increase delay on final frame of GIF
+animate(had_gif, fps = 10, nframes = 300, end_pause = 30, width = 650, height = 400, renderer = gifski_renderer(loop = FALSE))
+anim_save("HadISST_twitter_presentations.gif", animation = last_animation())
 
 ```
 
