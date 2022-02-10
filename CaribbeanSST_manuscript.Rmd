@@ -8,6 +8,36 @@ output:
     highlight: tango
 ---
 
+
+<br/>
+
+#### **Colleen B. Bove^1,2\*^, Laura Mudge^1,3^, and John F. Bruno^1^**
+
+^1^ The Department of Biology, The University of North Carolina at Chapel Hill, Chapel Hill, North Carolina, 27599-3280 USA
+
+^2^ The Department of Biology, Boston University, Boston, Massachusetts, 02215 USA
+
+^3^ Integral Consulting Inc., Annapolis, Maryland 21401 USA
+
+*Corresponding author: colleenbove@gmail.com
+
+<br/>
+
+#### **Abstract:**
+
+The world’s oceans are warming at an unprecedented rate, causing dramatic changes to coastal marine systems, especially coral reefs. We used three complementary ocean temperature databases (HadISST, Pathfinder, and OISST) to quantify change in thermal characteristics of Caribbean coral reefs over the last 150 years (1871–2020). These sea surface temperature (SST) databases included *in situ* and satellite-derived measurements at multiple spatial resolutions. We also compiled a Caribbean coral reef database identifying 5,326 unique reefs across the region. We found that Caribbean reefs have been warming for at least a century. Regionally reef warming began in 1915, and for four of the eight Caribbean ecoregions we assessed, significant warming was detected for the latter half of the nineteenth century. Following the global mid-twentieth century stasis, warming resumed on Caribbean reefs in the early 1980s in some ecoregions and in the 1990s for others. On average, Caribbean reefs warmed by 0.18 °C per decade during this period, ranging from 0.17 °C per decade on Bahamian reefs (since 1988) to 0.26 °C per decade on reefs within the Southern and Eastern Caribbean ecoregions (since 1981 and 1984, respectively). If this linear rate of warming continues, these already threatened ecosystems would warm by an additional ~1.5°C on average by 2100. We also found that marine heatwave (MHW) events are increasing in both frequency and duration across the Caribbean. Caribbean coral reefs now experience on average 5 MHW events annually, compared to 1 per year in the early 1980s, with recent events lasting on average 14 days. These changes in the thermal environment, in addition to other stressors including fishing and pollution, have caused a dramatic shift in the composition and functioning of Caribbean coral reef ecosystems. 
+
+<br/>
+
+##### **Citation:**
+
+
+*Repository DOI hosted on Zenodo* [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4751658.svg)](https://doi.org/10.5281/zenodo.4751658)
+
+
+<br/>
+
+
 ```{r knit options, include=FALSE}
 
 knitr::opts_chunk$set(
@@ -151,33 +181,6 @@ MHW_carib_path <- "/Users/colleen/Dropbox/Git/Data_Not_On_Git/CaribbeanSST_data/
 
 ```
 
-<br/>
-
-#### **Colleen B. Bove^1,2\*^, Laura Mudge^1,3^, and John F. Bruno^1^**
-
-^1^ The Department of Biology, The University of North Carolina at Chapel Hill, Chapel Hill, North Carolina, 27599-3280 USA
-
-^2^ The Department of Biology, Boston University, Boston, Massachusetts, 02215 USA
-
-^3^ Integral Consulting Inc., Annapolis, Maryland 21401 USA
-
-*Corresponding author: colleenbove@gmail.com
-
-<br/>
-
-#### **Abstract:**
-
-The world’s oceans are warming at an unprecedented rate, causing dramatic changes to coastal marine systems, especially coral reefs. We used three complementary ocean temperature databases (HadISST, Pathfinder, and OISST) to quantify change in thermal characteristics of Caribbean coral reefs over the last 150 years (1871–2020). These sea surface temperature (SST) databases included *in situ* and satellite-derived SST (HadISST, OISST), as well as satellite-only observations (Pathfinder) at multiple spatial resolutions. We also compiled a Caribbean coral reef database identifying 5,326 unique reefs across the region. We found that Caribbean reefs have been warming for at least a century. Regionally reef warming began in 1915, and for four of the eight Caribbean ecoregions we assessed, significant warming was detected for the latter half of the nineteen century. Following the global mid-twentieth century stasis, warming resumed on Caribbean reefs in the early 1980s in some ecoregions and in the 1990s for others. On average, Caribbean reefs warmed by 0.18 °C per decade during this period, ranging from 0.17 °C per decade on Bahamian reefs (since 1988) to 0.26 °C per decade on reefs within the Southern and Eastern Caribbean ecoregions (since 1981 and 1984, respectively). If this linear rate of warming continues, these already threatened ecosystems would warm by an additional ~1.5°C on average by 2100. We also found that marine heatwave (MHW) events are increasing in both frequency and duration across the Caribbean. Caribbean coral reefs now experience on average 5 MHW events annually, compared to 1 per year in the early 1980s, with recent events lasting on average 14 days. These changes in the thermal environment, in addition to other stressors including fishing and pollution, have caused a dramatic shift in the composition and functioning of Caribbean coral reef ecosystems. 
-
-<br/>
-
-##### **Citation:**
-
-
-*Repository DOI hosted on Zenodo* [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4751658.svg)](https://doi.org/10.5281/zenodo.4751658)
-
-
-<br/>
 
 ## Caribbean Ecoregion Coral Reefs {.tabset}
 
@@ -1492,13 +1495,13 @@ had_gif <- had_plot_gif +
   shadow_mark(alpha = 0.1, size = 0.5)
 
 animate(had_gif, fps = 10, nframes = 300, end_pause = 2, width = 650, height = 400, renderer = gifski_renderer())
-anim_save("HadISST_twitter.gif")
+anim_save("HadISST.gif")
 
 
 ## saving a version for presentations
 # increase delay on final frame of GIF
 animate(had_gif, fps = 10, nframes = 300, end_pause = 30, width = 650, height = 400, renderer = gifski_renderer(loop = FALSE))
-anim_save("HadISST_twitter_presentations.gif", animation = last_animation())
+anim_save("HadISST_presentations.gif", animation = last_animation())
 
 ```
 
@@ -1859,7 +1862,7 @@ pixel_duration_lm <- lm(log(avg_duration) ~ year, data = mhw_pixel %>% filter(!i
 dur_mod <- tidy(pixel_duration_lm)
   
 # Diagnosis of model:
-check_model(pixel_duration_lm)
+#check_model(pixel_duration_lm)
 #summary(pixel_duration_lm)
 
 
@@ -1896,7 +1899,7 @@ pixel_rt_lm <- lm(log(avg_rt) ~ year, data = mhw_pixel %>% filter(!is.na(avg_rt)
 rt_mod <- tidy(pixel_rt_lm)
 
 # Diagnosis of model:
-check_model(pixel_rt_lm)
+#check_model(pixel_rt_lm)
 
 # make label of  R2 value for plot:
 rt_r2 <- summary(pixel_rt_lm)$r.squared
@@ -2498,7 +2501,7 @@ kable(ecoregion_slope, booktabs = TRUE, row.names = FALSE, col.names = c("Ecoreg
 
 ### Table S4
 
-**Table S4.** Model results for MHW trends on coral reefs in the Caribbean basin between 1981-2018. Frequency was modeled using a glm model with poisson distribution and log link. Estimates, standard error, z scores (statistic), and p-values are reported. Nagelkerke pseudo r-squared used to assess goodness of fit. MHW duration and return time were log transformed before modeling with ols models. Estimate, standard error, t value (statistic) and p-value are reported along with multiple and adjusted r-squared.
+**Table S4.** Model results for MHW trends on coral reefs in the Caribbean basin between 1981-2018. Frequency was modelled using a glm model with poisson distribution and log link. Estimates, standard error, z scores (statistic), and p-values are reported. Nagelkerke pseudo r-squared used to assess goodness of fit. MHW duration and return time were log transformed before modelling with ols models. Estimate, standard error, t value (statistic) and p-value are reported along with multiple and adjusted r-squared.
 
 ```{r table S4 saving}
 
@@ -2667,7 +2670,7 @@ saveWorkbook(wb, file="data/Supplemental_Tables.xlsx", overwrite = TRUE)
 
 ## Session information {.tabset}
 
-Sea surface temperature code written by [Colleen B. Bove](https://colleenbove.science) and marine heatwave code written by [Laura Mudge](https://lmudge13.github.io/index.html).
+Sea surface temperature and visualization code written by [Colleen B. Bove](https://colleenbove.science) and marine heatwave code written by [Laura Mudge](https://lmudge13.github.io/index.html).
 
 Session information from the latest compile on `r date`:
 
