@@ -32,6 +32,7 @@ The world’s oceans are warming at an unprecedented rate, causing dramatic chan
 ##### **Citation:**
 
 
+
 *Repository DOI hosted on Zenodo* [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4751658.svg)](https://doi.org/10.5281/zenodo.4751658)
 
 
@@ -597,7 +598,7 @@ had_month_plot <- ggplot() +
   scale_x_continuous(name = "Month", breaks = c(1,2,3,4,5,6,7,8,9,10,11,12), labels = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")) +
   scale_y_continuous(breaks = seq(24, 30, 1)) +
   ylab('SST (°C)') +
-  ggtitle("HadISST (1871–2020)") + 
+  ggtitle("HadISST (1871-2020)") + 
   theme(plot.title = element_text(size = 13))
 
 ```
@@ -715,7 +716,7 @@ for(i in c("incr")) {
 
 had_year_plot <- ggplot() +
   theme_bw() +
-  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14), legend.position = "none") +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(), panel.background=element_blank(), strip.background = element_blank(), panel.border = element_rect(colour = "black", fill=NA, size=1), text = element_text(size = 14), legend.position = "none", plot.margin = margin(10, 13, 10, 10)) +
   geom_hline(yintercept = mean(HADI_year_avg$mean), colour = "grey", linetype = 2) +
   geom_vline(xintercept = 1988, colour = "grey", linetype = 1) + #Bahamian
   geom_vline(xintercept = 1984, colour = "grey", linetype = 1) + #E Caribbean
@@ -738,7 +739,7 @@ had_year_plot <- ggplot() +
   geom_line(data = had_predict_df, aes(x=year, y=response), lwd = 0.75) +
   geom_line(data = had_gam_slope, aes(x = year, y = value, colour = type), lwd = 0.75) +
   scale_colour_manual(values = c( "#d73027")) +
-  coord_cartesian(xlim = c(1870, 2020), expand = FALSE)
+  coord_cartesian(xlim = c(1870, 2020), expand = FALSE) 
 
 ```
 
@@ -746,8 +747,8 @@ had_year_plot <- ggplot() +
 
 # Saves the manuscript version of the HadISST historic SST
 ggarrange(had_month_plot, had_year_plot, ncol = 1, labels = c("A", "B"), align = "hv")
-  ggsave("figures/Manuscript/Fig2_SST_trends.pdf", width = 6, height = 7.5)
-  ggsave("figures/Manuscript/Fig2_SST_trends.png", width = 6, height = 7.5)
+  ggsave("figures/Manuscript/Fig2_SST_trends.pdf", dpi = 1200, width = 6, height = 7.5)
+  ggsave("figures/Manuscript/Fig2_SST_trends.png", dpi = 1200, width = 6, height = 7.5)
 
 ```
 
