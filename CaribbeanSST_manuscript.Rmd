@@ -30,7 +30,7 @@ The world’s oceans are warming at an unprecedented rate, causing dramatic chan
 <br/>
 
 ##### **Citation:**
-
+Bove CB, Mudge L, Bruno JF (2022) A century of warming on Caribbean reefs. PLOS Climate 1(3): e0000002. [https://doi.org/10.1371/journal.pclm.0000002](https://doi.org/10.1371/journal.pclm.0000002)
 
 
 *Repository DOI hosted on Zenodo* [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4751658.svg)](https://doi.org/10.5281/zenodo.4751658)
