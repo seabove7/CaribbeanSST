@@ -6,7 +6,7 @@
  
 GitHub repository containing data and code accompanying the Caribbean warming and MHW manuscript (Bove et al 2022; DOI: [https://doi.org/10.1371/journal.pclm.0000002](https://doi.org/10.1371/journal.pclm.0000002))
 
-**Repository DOI:** [![DOI](https://zenodo.org/badge/283885820.svg)](https://zenodo.org/badge/latestdoi/283885820)
+**Repository DOI:** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6342215.svg)](https://doi.org/10.5281/zenodo.6342215)
 
 **Authors:** Colleen B. Bove, Laura Mudge & John F Bruno
 
