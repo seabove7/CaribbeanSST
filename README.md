@@ -4,7 +4,7 @@
 <img src="https://github.com/seabove7/CaribbeanSST/blob/master/figures/Manuscript/Fig6_ClimateStripes.png" width = "700" />
 </p> 
  
-GitHub repository containing data and code accompanying the Caribbean warming and MHW manuscript (Bove et al XXX; DOI: XXX)
+GitHub repository containing data and code accompanying the Caribbean warming and MHW manuscript (Bove et al 2022; DOI: [https://doi.org/10.1371/journal.pclm.0000002](https://doi.org/10.1371/journal.pclm.0000002))
 
 **Repository DOI:** [![DOI](https://zenodo.org/badge/283885820.svg)](https://zenodo.org/badge/latestdoi/283885820)
 
